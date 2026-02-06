@@ -1,0 +1,129 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-02-06T22:20:00Z",
+  "__export_source": "insomnia.desktop.app:2026.1.0",
+  "resources": [
+    {
+      "_id": "wrk_capturas",
+      "_type": "workspace",
+      "name": "Capturas FIAPX",
+      "description": "Coleção para testar endpoints de capturas"
+    },
+    {
+      "_id": "req_health",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "Health",
+      "method": "GET",
+      "url": "http://localhost:8888/api/health",
+      "headers": [],
+      "body": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_test_hello",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "Test Hello",
+      "method": "GET",
+      "url": "http://localhost:8888/api/test/hello",
+      "headers": [],
+      "body": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_list",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "List Capturas",
+      "method": "GET",
+      "url": "http://localhost:8888/api/capturas/list?userId=1",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ],
+      "body": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_upload",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "Upload Capturas (multipart)",
+      "method": "POST",
+      "url": "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "files",
+            "type": "file",
+            "fileName": "video.mp4",
+            "value": "/absolute/path/to/video.mp4"
+          }
+        ]
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_upload_multiple",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "Upload Múltiplo (multipart)",
+      "method": "POST",
+      "url": "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br",
+      "headers": [
+        { "name": "Accept", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          {
+            "name": "files",
+            "type": "file",
+            "fileName": "video1.mp4",
+            "value": "/absolute/path/to/video1.mp4"
+          },
+          {
+            "name": "files",
+            "type": "file",
+            "fileName": "video2.mp4",
+            "value": "/absolute/path/to/video2.mp4"
+          }
+        ]
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_download",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "Download Captura",
+      "method": "GET",
+      "url": "http://localhost:8888/api/capturas/download/1?userId=1",
+      "headers": [],
+      "body": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_update_status",
+      "parentId": "wrk_capturas",
+      "_type": "request",
+      "name": "Update Status",
+      "method": "PUT",
+      "url": "http://localhost:8888/api/capturas/update-status/1",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Accept", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{ \"status\": \"CONCLUIDO\" }"
+      },
+      "parameters": []
+    }
+  ]
+}

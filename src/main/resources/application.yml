@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: fiapx
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:fiapx}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 500MB
+
+# Swagger/OpenAPI configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+server:
+  port: 8888
+  servlet:
+    context-path: /api
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# Logging - Configuração detalhada em logback-spring.xml (JSON estruturado para CloudWatch)
+logging:
+  level:
+    root: INFO
+    com.fiap.techchallenge: INFO
+
+# Configurações de Capturas de Vídeo
+capturas:
+  storage:
+    disk: ${CAPTURAS_STORAGE_DISK:local}  # local ou s3 (futuro)
+    local-path: ${CAPTURAS_STORAGE_PATH:./uploads/capturas}
+  max-video-size: ${CAPTURAS_MAX_VIDEO_SIZE:100}  # Tamanho máximo em MB
