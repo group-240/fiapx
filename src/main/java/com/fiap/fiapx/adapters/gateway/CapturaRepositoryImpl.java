@@ -12,26 +12,26 @@ import java.util.stream.Collectors;
 
 @Component
 public class CapturaRepositoryImpl implements CapturaRepository {
-    
+
     private final JpaCapturaRepository jpaCapturaRepository;
-    
+
     public CapturaRepositoryImpl(JpaCapturaRepository jpaCapturaRepository) {
         this.jpaCapturaRepository = jpaCapturaRepository;
     }
-    
+
     @Override
     public Captura save(Captura captura) {
         CapturaEntity entity = toEntity(captura);
         CapturaEntity savedEntity = jpaCapturaRepository.save(entity);
         return toDomain(savedEntity);
     }
-    
+
     @Override
     public Optional<Captura> findById(Long id) {
         return jpaCapturaRepository.findById(id)
                 .map(this::toDomain);
     }
-    
+
     @Override
     public List<Captura> findByUserId(Long userId) {
         return jpaCapturaRepository.findByIdUser(userId)
@@ -39,12 +39,12 @@ public class CapturaRepositoryImpl implements CapturaRepository {
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     public void deleteById(Long id) {
         jpaCapturaRepository.deleteById(id);
     }
-    
+
     @Override
     public List<Captura> findAll() {
         return jpaCapturaRepository.findAll()
@@ -52,7 +52,7 @@ public class CapturaRepositoryImpl implements CapturaRepository {
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
-    
+
     private CapturaEntity toEntity(Captura captura) {
         CapturaEntity entity = new CapturaEntity();
         entity.setId(captura.getId());
@@ -64,7 +64,7 @@ public class CapturaRepositoryImpl implements CapturaRepository {
         entity.setUpdatedAt(captura.getUpdatedAt());
         return entity;
     }
-    
+
     private Captura toDomain(CapturaEntity entity) {
         return new Captura(
                 entity.getId(),

@@ -17,7 +17,7 @@ public class Captura {
         this.status = CapturaStatus.PENDENTE;
     }
 
-    public Captura(Long id, Long idUser, String email, CapturaStatus status, String path, 
+    public Captura(Long id, Long idUser, String email, CapturaStatus status, String path,
                    LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.idUser = idUser;

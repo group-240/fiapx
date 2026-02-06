@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Schema(description = "Resposta com mensagem")
 public class MessageResponse {
-    
+
     @Schema(description = "Mensagem de resposta", example = "Hello FIAPX!")
     private String message;
-    
+
     @Schema(description = "Timestamp da resposta")
     private LocalDateTime timestamp;
 }

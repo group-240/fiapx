@@ -10,20 +10,20 @@ import java.util.stream.Collectors;
 
 @Service
 public class ListCapturasUseCase {
-    
+
     private final CapturaRepository capturaRepository;
-    
+
     public ListCapturasUseCase(CapturaRepository capturaRepository) {
         this.capturaRepository = capturaRepository;
     }
-    
+
     public List<CapturaDTO> execute(Long userId) {
         List<Captura> capturas = capturaRepository.findByUserId(userId);
         return capturas.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
-    
+
     private CapturaDTO toDTO(Captura captura) {
         return new CapturaDTO(
                 captura.getId(),

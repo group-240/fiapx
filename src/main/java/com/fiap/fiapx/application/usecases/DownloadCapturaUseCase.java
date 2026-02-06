@@ -11,38 +11,38 @@ import java.io.File;
 
 @Service
 public class DownloadCapturaUseCase {
-    
+
     private final CapturaRepository capturaRepository;
     private final FileStorageService fileStorageService;
-    
+
     public DownloadCapturaUseCase(CapturaRepository capturaRepository,
                                   FileStorageService fileStorageService) {
         this.capturaRepository = capturaRepository;
         this.fileStorageService = fileStorageService;
     }
-    
+
     public File execute(Long capturaId, Long userId) {
         // Buscar captura
         Captura captura = capturaRepository.findById(capturaId)
                 .orElseThrow(() -> new CapturaNotFoundException(capturaId));
-        
+
         // Validar se pertence ao usuário
         if (!captura.pertenceAoUsuario(userId)) {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar esta captura");
         }
-        
+
         // Retornar arquivo
         return fileStorageService.load(captura.getPath());
     }
-    
+
     public Captura getCaptura(Long capturaId, Long userId) {
         Captura captura = capturaRepository.findById(capturaId)
                 .orElseThrow(() -> new CapturaNotFoundException(capturaId));
-        
+
         if (!captura.pertenceAoUsuario(userId)) {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar esta captura");
         }
-        
+
         return captura;
     }
 }

@@ -14,11 +14,11 @@ import java.util.List;
 
 @Service
 public class UploadCapturaUseCase {
-    
+
     private final CapturaRepository capturaRepository;
     private final FileStorageService fileStorageService;
     private final MessageQueueService messageQueueService;
-    
+
     public UploadCapturaUseCase(CapturaRepository capturaRepository,
                                 FileStorageService fileStorageService,
                                 MessageQueueService messageQueueService) {
@@ -26,25 +26,25 @@ public class UploadCapturaUseCase {
         this.fileStorageService = fileStorageService;
         this.messageQueueService = messageQueueService;
     }
-    
+
     @Transactional
     public List<CapturaDTO> execute(Long userId, String email, MultipartFile[] files) {
         List<CapturaDTO> capturasList = new ArrayList<>();
-        
+
         for (MultipartFile file : files) {
             try {
                 // 1. Salvar arquivo no storage
                 String path = fileStorageService.store(file);
-                
+
                 // 2. Criar registro no banco de dados
                 Captura captura = new Captura();
                 captura.setIdUser(userId);
                 captura.setEmail(email);
                 captura.iniciarProcessamento();
                 captura.setPath(path);
-                
+
                 Captura savedCaptura = capturaRepository.save(captura);
-                
+
                 // 3. Enviar para fila de processamento
                 messageQueueService.sendToProcessingQueue(
                         savedCaptura.getId(),
@@ -52,20 +52,20 @@ public class UploadCapturaUseCase {
                         savedCaptura.getEmail(),
                         savedCaptura.getPath()
                 );
-                
+
                 // 4. Adicionar à lista de resposta
                 capturasList.add(toDTO(savedCaptura));
-                
+
             } catch (Exception e) {
                 // Log do erro mas continua processando outros arquivos
                 // (tratamento transacional parcial)
                 throw new RuntimeException("Erro ao processar arquivo: " + file.getOriginalFilename(), e);
             }
         }
-        
+
         return capturasList;
     }
-    
+
     private CapturaDTO toDTO(Captura captura) {
         return new CapturaDTO(
                 captura.getId(),

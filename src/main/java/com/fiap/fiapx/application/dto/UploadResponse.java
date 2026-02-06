@@ -12,13 +12,13 @@ import java.util.List;
 @AllArgsConstructor
 @Schema(description = "Resposta de upload de vídeos")
 public class UploadResponse {
-    
+
     @Schema(description = "Mensagem de sucesso")
     private String message;
-    
+
     @Schema(description = "Capturas criadas")
     private List<CapturaDTO> capturas;
-    
+
     @Schema(description = "Total de arquivos enviados")
     private Integer totalFiles;
 }

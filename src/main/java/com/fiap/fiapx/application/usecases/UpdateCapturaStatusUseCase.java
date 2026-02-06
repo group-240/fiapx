@@ -10,25 +10,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UpdateCapturaStatusUseCase {
-    
+
     private final CapturaRepository capturaRepository;
-    
+
     public UpdateCapturaStatusUseCase(CapturaRepository capturaRepository) {
         this.capturaRepository = capturaRepository;
     }
-    
+
     @Transactional
     public CapturaDTO execute(Long capturaId, CapturaStatus novoStatus) {
         Captura captura = capturaRepository.findById(capturaId)
                 .orElseThrow(() -> new CapturaNotFoundException(capturaId));
-        
+
         captura.atualizarStatus(novoStatus);
-        
+
         Captura updatedCaptura = capturaRepository.save(captura);
-        
+
         return toDTO(updatedCaptura);
     }
-    
+
     private CapturaDTO toDTO(Captura captura) {
         return new CapturaDTO(
                 captura.getId(),

@@ -36,12 +36,12 @@ import java.util.Arrays;
 @RequestMapping("/capturas")
 @Tag(name = "Capturas", description = "Gerenciamento de capturas de vídeo")
 public class CapturaController {
-    
+
     private final UploadCapturaUseCase uploadCapturaUseCase;
     private final ListCapturasUseCase listCapturasUseCase;
     private final DownloadCapturaUseCase downloadCapturaUseCase;
     private final UpdateCapturaStatusUseCase updateCapturaStatusUseCase;
-    
+
     public CapturaController(UploadCapturaUseCase uploadCapturaUseCase,
                             ListCapturasUseCase listCapturasUseCase,
                             DownloadCapturaUseCase downloadCapturaUseCase,
@@ -51,7 +51,7 @@ public class CapturaController {
         this.downloadCapturaUseCase = downloadCapturaUseCase;
         this.updateCapturaStatusUseCase = updateCapturaStatusUseCase;
     }
-    
+
         @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload de vídeos", description = "Permite upload de um ou múltiplos vídeos simultaneamente")
     @ApiResponses(value = {
@@ -64,24 +64,24 @@ public class CapturaController {
         public ResponseEntity<UploadResponse> upload(
             @Parameter(description = "ID do usuário (simulado para testes)", example = "1")
             @RequestParam(defaultValue = "1") Long userId,
-            
+
             @Parameter(description = "Email do usuário (simulado para testes)", example = "user@example.com")
             @RequestParam(defaultValue = "user@fiap.com.br") String email,
-            
+
             @Parameter(description = "Arquivos de vídeo para upload")
             @RequestPart("files") MultipartFile[] files) {
-        
+
         List<CapturaDTO> capturas = uploadCapturaUseCase.execute(userId, email, files);
-        
+
         UploadResponse response = new UploadResponse(
                 "Upload realizado com sucesso",
                 capturas,
                 files.length
         );
-        
+
         return ResponseEntity.ok(response);
     }
-    
+
     @GetMapping("/list")
     @Operation(summary = "Listar capturas", description = "Lista todas as capturas do usuário autenticado")
     @ApiResponses(value = {
@@ -90,11 +90,11 @@ public class CapturaController {
     public ResponseEntity<List<CapturaDTO>> list(
             @Parameter(description = "ID do usuário (simulado para testes)", example = "1")
             @RequestParam(defaultValue = "1") Long userId) {
-        
+
         List<CapturaDTO> capturas = listCapturasUseCase.execute(userId);
         return ResponseEntity.ok(capturas);
     }
-    
+
     @GetMapping("/download/{id}")
     @Operation(summary = "Download de vídeo", description = "Permite o download do vídeo da captura")
     @ApiResponses(value = {
@@ -105,23 +105,23 @@ public class CapturaController {
     public ResponseEntity<Resource> download(
             @Parameter(description = "ID da captura", required = true)
             @PathVariable Long id,
-            
+
             @Parameter(description = "ID do usuário (simulado para testes)", example = "1")
             @RequestParam(defaultValue = "1") Long userId) {
-        
+
         File file = downloadCapturaUseCase.execute(id, userId);
         Captura captura = downloadCapturaUseCase.getCaptura(id, userId);
-        
+
         Resource resource = new FileSystemResource(file);
-        
+
         String filename = file.getName();
-        
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }
-    
+
     @PutMapping("/update-status/{id}")
     @Operation(summary = "Atualizar status", description = "Atualiza o status da captura")
     @ApiResponses(value = {
@@ -131,12 +131,12 @@ public class CapturaController {
     public ResponseEntity<CapturaDTO> updateStatus(
             @Parameter(description = "ID da captura", required = true)
             @PathVariable Long id,
-            
+
             @RequestBody UpdateStatusRequest request) {
-        
+
         CapturaStatus novoStatus = CapturaStatus.valueOf(request.getStatus().toUpperCase());
         CapturaDTO captura = updateCapturaStatusUseCase.execute(id, novoStatus);
-        
+
         return ResponseEntity.ok(captura);
     }
 
