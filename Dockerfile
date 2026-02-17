@@ -7,9 +7,15 @@ RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn package -DskipTests
 
-FROM eclipse-temurin:17-jre
+FROM maven:3.9-eclipse-temurin-17
 WORKDIR /app
+
+# Copiar o JAR compilado
 COPY --from=build /app/target/*.jar app.jar
+
+# Copiar código fonte e pom.xml para permitir execução de testes
+COPY pom.xml .
+COPY src ./src
 
 # Instalar curl para health check
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*

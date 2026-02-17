@@ -65,6 +65,13 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- Spring Security Test -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Database - PostgreSQL é o único banco de dados utilizado nesta aplicação -->
         <dependency>
             <groupId>org.postgresql</groupId>
