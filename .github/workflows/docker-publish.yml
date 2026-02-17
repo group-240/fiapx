@@ -10,7 +10,7 @@ jobs:
   build-and-push:
     name: Build e Push Multi-arch
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4

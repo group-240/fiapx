@@ -8,7 +8,7 @@ jobs:
   code-quality:
     name: Verificação de Qualidade
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         java: ['17', '21']
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
   integration-test:
     name: Testes de Integração
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -99,7 +99,7 @@ jobs:
   docker-build-test:
     name: Testar Build Docker
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -127,7 +127,7 @@ jobs:
   security-scan:
     name: Scan de Segurança
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4

@@ -10,7 +10,7 @@ jobs:
   test:
     name: Testes e Cobertura
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -73,7 +73,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
     environment:
       name: staging
       url: https://staging.fiapx.com
-    
+
     steps:
       - name: Deploy para Staging
         run: |
@@ -139,7 +139,7 @@ jobs:
     environment:
       name: production
       url: https://fiapx.com
-    
+
     steps:
       - name: Deploy para Production
         run: |
