@@ -32,9 +32,12 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
-
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+  override-with-generic-response: false
+# verrr
 server:
-  port: 8888
+  port: 8889
   servlet:
     context-path: /api
 

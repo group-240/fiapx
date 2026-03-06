@@ -11,10 +11,32 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
+
+    private static final List<String> ALLOWED_VIDEO_TYPES = Arrays.asList(
+            "video/mp4",
+            "video/mpeg",
+            "video/quicktime",
+            "video/x-msvideo",
+            "video/x-ms-wmv",
+            "video/webm",
+            "video/avi"
+    );
+
+    private static final List<String> ALLOWED_VIDEO_EXTENSIONS = Arrays.asList(
+            ".mp4",
+            ".mpeg",
+            ".mpg",
+            ".mov",
+            ".avi",
+            ".wmv",
+            ".webm"
+    );
 
     @Value("${capturas.storage.disk:local}")
     private String storageDisk;
@@ -74,6 +96,30 @@ public class FileStorageService {
             throw new InvalidFileException("Arquivo vazio ou nulo");
         }
 
+        // Validar nome do arquivo
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new InvalidFileException("Nome do arquivo inválido");
+        }
+
+        // Validar extensão do arquivo
+        String fileExtension = getFileExtension(originalFilename).toLowerCase();
+        if (!ALLOWED_VIDEO_EXTENSIONS.contains(fileExtension)) {
+            throw new InvalidFileException(
+                    String.format("Extensão de arquivo não permitida. Extensões aceitas: %s",
+                            String.join(", ", ALLOWED_VIDEO_EXTENSIONS))
+            );
+        }
+
+        // Validar tipo de conteúdo
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_VIDEO_TYPES.contains(contentType.toLowerCase())) {
+            throw new InvalidFileException(
+                    String.format("Tipo de arquivo não permitido. Apenas vídeos são aceitos. Tipos aceitos: %s",
+                            String.join(", ", ALLOWED_VIDEO_TYPES))
+            );
+        }
+
         // Validar tamanho
         long fileSizeMB = file.getSize() / (1024 * 1024);
         if (fileSizeMB > maxVideoSizeMB) {
@@ -82,11 +128,12 @@ public class FileStorageService {
                             maxVideoSizeMB, fileSizeMB)
             );
         }
+    }
 
-        // Validar tipo de arquivo (vídeos)
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("video/")) {
-            throw new InvalidFileException("Apenas arquivos de vídeo são permitidos");
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
         }
+        return filename.substring(filename.lastIndexOf("."));
     }
 }

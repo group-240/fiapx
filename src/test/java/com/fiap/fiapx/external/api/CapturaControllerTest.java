@@ -272,7 +272,6 @@ class CapturaControllerTest {
         tempFile.deleteOnExit();
 
         when(downloadCapturaUseCase.execute(1L, 1L)).thenReturn(tempFile);
-        when(downloadCapturaUseCase.getCaptura(1L, 1L)).thenReturn(captura);
 
         // Act & Assert
         mockMvc.perform(get("/capturas/download/1")
@@ -282,7 +281,6 @@ class CapturaControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM));
 
         verify(downloadCapturaUseCase, times(1)).execute(1L, 1L);
-        verify(downloadCapturaUseCase, times(1)).getCaptura(1L, 1L);
     }
 
     @Test
@@ -326,7 +324,6 @@ class CapturaControllerTest {
         tempFile.deleteOnExit();
 
         when(downloadCapturaUseCase.execute(1L, 1L)).thenReturn(tempFile);
-        when(downloadCapturaUseCase.getCaptura(1L, 1L)).thenReturn(captura);
 
         // Act & Assert
         mockMvc.perform(get("/capturas/download/1"))
@@ -446,4 +443,213 @@ class CapturaControllerTest {
         verifyNoInteractions(uploadCapturaUseCase, listCapturasUseCase,
                 downloadCapturaUseCase, updateCapturaStatusUseCase);
     }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve retornar erro quando extensão não é permitida")
+    void deveRetornarErroQuandoExtensaoNaoPermitida() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "document.pdf",
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenThrow(new InvalidFileException("Extensão de arquivo não permitida"));
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Extensão de arquivo não permitida"));
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve retornar erro quando arquivo excede tamanho máximo")
+    void deveRetornarErroQuandoArquivoExcedeTamanho() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "large-video.mp4",
+                "video/mp4",
+                new byte[1024]
+        );
+
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenThrow(new InvalidFileException("Arquivo muito grande. Tamanho máximo: 100 MB"));
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(containsString("Arquivo muito grande")));
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve aceitar arquivo AVI")
+    void deveAceitarArquivoAvi() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "video.avi",
+                "video/x-msvideo",
+                "conteudo do video avi".getBytes()
+        );
+
+        List<CapturaDTO> capturas = Arrays.asList(capturaDTO);
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenReturn(capturas);
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Upload realizado com sucesso"));
+
+        verify(uploadCapturaUseCase, times(1))
+                .execute(eq(1L), eq("user@fiap.com.br"), any());
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve aceitar arquivo MOV")
+    void deveAceitarArquivoMov() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "video.mov",
+                "video/quicktime",
+                "conteudo do video mov".getBytes()
+        );
+
+        List<CapturaDTO> capturas = Arrays.asList(capturaDTO);
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenReturn(capturas);
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Upload realizado com sucesso"));
+
+        verify(uploadCapturaUseCase, times(1))
+                .execute(eq(1L), eq("user@fiap.com.br"), any());
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve aceitar arquivo WebM")
+    void deveAceitarArquivoWebM() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "video.webm",
+                "video/webm",
+                "conteudo do video webm".getBytes()
+        );
+
+        List<CapturaDTO> capturas = Arrays.asList(capturaDTO);
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenReturn(capturas);
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Upload realizado com sucesso"));
+
+        verify(uploadCapturaUseCase, times(1))
+                .execute(eq(1L), eq("user@fiap.com.br"), any());
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve aceitar arquivo MPEG")
+    void deveAceitarArquivoMpeg() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "video.mpeg",
+                "video/mpeg",
+                "conteudo do video mpeg".getBytes()
+        );
+
+        List<CapturaDTO> capturas = Arrays.asList(capturaDTO);
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenReturn(capturas);
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Upload realizado com sucesso"));
+
+        verify(uploadCapturaUseCase, times(1))
+                .execute(eq(1L), eq("user@fiap.com.br"), any());
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve retornar erro quando arquivo vazio")
+    void deveRetornarErroQuandoArquivoVazio() throws Exception {
+        // Arrange
+        MockMultipartFile emptyFile = new MockMultipartFile(
+                "files",
+                "video.mp4",
+                "video/mp4",
+                new byte[0]
+        );
+
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenThrow(new InvalidFileException("Arquivo vazio ou nulo"));
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(emptyFile)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Arquivo vazio ou nulo"));
+    }
+
+    @Test
+    @DisplayName("POST /capturas/upload - deve retornar erro quando nome do arquivo é inválido")
+    void deveRetornarErroQuandoNomeArquivoInvalido() throws Exception {
+        // Arrange
+        MockMultipartFile file = new MockMultipartFile(
+                "files",
+                "   ",
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        when(uploadCapturaUseCase.execute(eq(1L), eq("user@fiap.com.br"), any()))
+                .thenThrow(new InvalidFileException("Nome do arquivo inválido"));
+
+        // Act & Assert
+        mockMvc.perform(multipart("/capturas/upload")
+                        .file(file)
+                        .param("userId", "1")
+                        .param("email", "user@fiap.com.br")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Nome do arquivo inválido"));
+    }
 }
+
