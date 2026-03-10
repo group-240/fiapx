@@ -3,6 +3,9 @@
 ## Visão Geral
 Módulo completo para gerenciamento de capturas de vídeo com upload, listagem, download e processamento assíncrono, seguindo os princípios de **Arquitetura Limpa**.
 
+## Documentação
+- [EventStorming](https://miro.com/app/board/uXjVGUWBbfY=/?share_link_id=812892120415)
+
 ## Arquitetura
 
 ```
