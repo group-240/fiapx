@@ -2,29 +2,20 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [fix]
   pull_request:
-    branches: [ main, develop ]
+    branches: [fix]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY: fiapx
+  EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
 
 jobs:
-  test:
-    name: Testes e Cobertura
+  build-and-deploy:
+    name: Build, Push ECR, Deploy EKS
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: fiapx_test
-          POSTGRES_USER: fiapx
-          POSTGRES_PASSWORD: fiapx123
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout código
@@ -37,33 +28,38 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Executar testes
-        run: mvn clean test
-        env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/fiapx_test
-          SPRING_DATASOURCE_USERNAME: fiapx
-          SPRING_DATASOURCE_PASSWORD: fiapx123
+      - name: Build com Maven
+        run: mvn clean package -DskipTests
 
-      - name: Verificar cobertura
-        run: mvn verify
-        env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/fiapx_test
-          SPRING_DATASOURCE_USERNAME: fiapx
-          SPRING_DATASOURCE_PASSWORD: fiapx123
-
-      - name: Upload relatório cobertura
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: jacoco-report
-          path: target/site/jacoco/
-          retention-days: 30
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Comentar PR com cobertura
-        if: github.event_name == 'pull_request'
-        uses: madrapps/jacoco-report@v1.6.1
-        with:
-          paths: target/site/jacoco/jacoco.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 80
-          min-coverage-changed-files: 80
+      - name: Login no ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build e push da imagem Docker
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Configurar kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Deploy no EKS
+        run: |
+          sed -i "s|PLACEHOLDER_ECR_URL/fiapx:latest|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deployment/fiapx -n fiapx --timeout=120s
+

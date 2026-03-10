@@ -7,8 +7,6 @@ import com.fiap.fiapx.domain.repositories.CapturaRepository;
 import com.fiap.fiapx.external.storage.FileStorageService;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-
 @Service
 public class DownloadCapturaUseCase {
 
@@ -21,17 +19,14 @@ public class DownloadCapturaUseCase {
         this.fileStorageService = fileStorageService;
     }
 
-    public File execute(Long capturaId, Long userId) {
-        // Buscar captura
+    public byte[] execute(Long capturaId, Long userId) {
         Captura captura = capturaRepository.findById(capturaId)
                 .orElseThrow(() -> new CapturaNotFoundException(capturaId));
 
-        // Validar se pertence ao usuário
         if (!captura.pertenceAoUsuario(userId)) {
             throw new UnauthorizedAccessException("Você não tem permissão para acessar esta captura");
         }
 
-        // Retornar arquivo
         return fileStorageService.load(captura.getPath());
     }
 

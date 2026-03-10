@@ -7,30 +7,23 @@ import com.fiap.fiapx.application.usecases.DownloadCapturaUseCase;
 import com.fiap.fiapx.application.usecases.ListCapturasUseCase;
 import com.fiap.fiapx.application.usecases.UpdateCapturaStatusUseCase;
 import com.fiap.fiapx.application.usecases.UploadCapturaUseCase;
-import com.fiap.fiapx.domain.entities.Captura;
 import com.fiap.fiapx.domain.entities.CapturaStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Arrays;
 
 @RestController
 @RequestMapping("/capturas")
@@ -96,30 +89,25 @@ public class CapturaController {
     }
 
     @GetMapping("/download/{id}")
-    @Operation(summary = "Download de vídeo", description = "Permite o download do vídeo da captura")
+    @Operation(summary = "Download do ZIP de frames", description = "Faz download do ZIP com os frames extraídos")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Arquivo retornado com sucesso"),
         @ApiResponse(responseCode = "403", description = "Acesso não autorizado"),
         @ApiResponse(responseCode = "404", description = "Captura não encontrada")
     })
-    public ResponseEntity<Resource> download(
+    public ResponseEntity<byte[]> download(
             @Parameter(description = "ID da captura", required = true)
             @PathVariable Long id,
 
             @Parameter(description = "ID do usuário (simulado para testes)", example = "1")
             @RequestParam(defaultValue = "1") Long userId) {
 
-        File file = downloadCapturaUseCase.execute(id, userId);
-        Captura captura = downloadCapturaUseCase.getCaptura(id, userId);
-
-        Resource resource = new FileSystemResource(file);
-
-        String filename = file.getName();
+        byte[] fileBytes = downloadCapturaUseCase.execute(id, userId);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"frames_" + id + ".zip\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
+                .body(fileBytes);
     }
 
     @PutMapping("/update-status/{id}")

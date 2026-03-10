@@ -45,12 +45,12 @@ public class UploadCapturaUseCase {
 
                 Captura savedCaptura = capturaRepository.save(captura);
 
-                // 3. Enviar para fila de processamento
+                // 3. Enviar para fila de processamento (passa s3Key)
                 messageQueueService.sendToProcessingQueue(
                         savedCaptura.getId(),
                         savedCaptura.getIdUser(),
                         savedCaptura.getEmail(),
-                        savedCaptura.getPath()
+                        savedCaptura.getPath()   // path agora é s3Key
                 );
 
                 // 4. Adicionar à lista de resposta
