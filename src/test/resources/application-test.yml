@@ -14,6 +14,12 @@ spring:
       ddl-auto: create-drop
     show-sql: false
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
   security:
     oauth2:
       resourceserver:
@@ -24,7 +30,13 @@ spring:
 server:
   port: 0
 
+rabbitmq:
+  queue: test-video-processing-queue
+  exchange: test-video-processing-exchange
+  routing-key: test.video.processing
+
 logging:
   level:
     root: WARN
     com.fiap.techchallenge: DEBUG
+

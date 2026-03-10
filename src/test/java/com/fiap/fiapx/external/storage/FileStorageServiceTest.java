@@ -182,7 +182,29 @@ class FileStorageServiceTest {
                 () -> fileStorageService.store(imageFile)
         );
 
-        assertEquals("Apenas arquivos de vídeo são permitidos", exception.getMessage());
+        // Extension is validated first
+        assertTrue(exception.getMessage().contains("Extensão de arquivo não permitida"));
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando content type não é vídeo mas extensão é válida")
+    void deveLancarExcecaoQuandoContentTypeNaoEVideoMasExtensaoValida() {
+        // Arrange - file with valid extension but wrong content type
+        MockMultipartFile fileWithWrongType = new MockMultipartFile(
+                "file",
+                "video.mp4",
+                "application/pdf",
+                "conteudo".getBytes()
+        );
+
+        // Act & Assert
+        InvalidFileException exception = assertThrows(
+                InvalidFileException.class,
+                () -> fileStorageService.store(fileWithWrongType)
+        );
+
+        assertTrue(exception.getMessage().contains("Tipo de arquivo não permitido"));
+        assertTrue(exception.getMessage().contains("Apenas vídeos são aceitos"));
     }
 
     @Test
@@ -202,7 +224,7 @@ class FileStorageServiceTest {
                 () -> fileStorageService.store(fileWithoutType)
         );
 
-        assertEquals("Apenas arquivos de vídeo são permitidos", exception.getMessage());
+        assertTrue(exception.getMessage().contains("Tipo de arquivo não permitido"));
     }
 
     @Test
@@ -370,13 +392,14 @@ class FileStorageServiceTest {
     @DisplayName("Deve aceitar diferentes tipos de vídeo")
     void deveAceitarDiferentesTiposDeVideo() {
         // Arrange & Act & Assert
-        String[] videoTypes = {"video/mp4", "video/avi", "video/mov", "video/wmv", "video/mkv"};
+        String[] videoTypes = {"video/mp4", "video/avi", "video/quicktime", "video/webm"};
+        String[] extensions = {".mp4", ".avi", ".mov", ".webm"};
 
-        for (String videoType : videoTypes) {
+        for (int i = 0; i < videoTypes.length; i++) {
             MockMultipartFile file = new MockMultipartFile(
                     "file",
-                    "video.mp4",
-                    videoType,
+                    "video" + extensions[i],
+                    videoTypes[i],
                     "conteudo".getBytes()
             );
 
@@ -385,4 +408,185 @@ class FileStorageServiceTest {
             assertTrue(new File(path).exists());
         }
     }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando extensão não é permitida")
+    void deveLancarExcecaoQuandoExtensaoNaoPermitida() {
+        // Arrange
+        MockMultipartFile fileWithBadExtension = new MockMultipartFile(
+                "file",
+                "video.txt",
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        // Act & Assert
+        InvalidFileException exception = assertThrows(
+                InvalidFileException.class,
+                () -> fileStorageService.store(fileWithBadExtension)
+        );
+
+        assertTrue(exception.getMessage().contains("Extensão de arquivo não permitida"));
+        assertTrue(exception.getMessage().contains("Extensões aceitas"));
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando nome do arquivo é nulo")
+    void deveLancarExcecaoQuandoNomeArquivoNulo() {
+        // Arrange
+        MockMultipartFile fileWithNullName = new MockMultipartFile(
+                "file",
+                null,
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        // Act & Assert
+        InvalidFileException exception = assertThrows(
+                InvalidFileException.class,
+                () -> fileStorageService.store(fileWithNullName)
+        );
+
+        assertEquals("Nome do arquivo inválido", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando nome do arquivo é vazio")
+    void deveLancarExcecaoQuandoNomeArquivoVazio() {
+        // Arrange
+        MockMultipartFile fileWithBlankName = new MockMultipartFile(
+                "file",
+                "   ",
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        // Act & Assert
+        InvalidFileException exception = assertThrows(
+                InvalidFileException.class,
+                () -> fileStorageService.store(fileWithBlankName)
+        );
+
+        assertEquals("Nome do arquivo inválido", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando arquivo não tem extensão")
+    void deveLancarExcecaoQuandoArquivoSemExtensao() {
+        // Arrange
+        MockMultipartFile fileWithoutExtension = new MockMultipartFile(
+                "file",
+                "video",
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        // Act & Assert
+        InvalidFileException exception = assertThrows(
+                InvalidFileException.class,
+                () -> fileStorageService.store(fileWithoutExtension)
+        );
+
+        assertTrue(exception.getMessage().contains("Extensão de arquivo não permitida"));
+    }
+
+    @Test
+    @DisplayName("Deve aceitar arquivo MPEG com sucesso")
+    void deveAceitarArquivoMpegComSucesso() {
+        // Arrange
+        MockMultipartFile mpegFile = new MockMultipartFile(
+                "file",
+                "video.mpeg",
+                "video/mpeg",
+                "conteudo do video mpeg".getBytes()
+        );
+
+        // Act
+        String path = fileStorageService.store(mpegFile);
+
+        // Assert
+        assertNotNull(path);
+        assertTrue(path.endsWith(".mpeg"));
+        assertTrue(new File(path).exists());
+    }
+
+    @Test
+    @DisplayName("Deve aceitar arquivo AVI com sucesso")
+    void deveAceitarArquivoAviComSucesso() {
+        // Arrange
+        MockMultipartFile aviFile = new MockMultipartFile(
+                "file",
+                "video.avi",
+                "video/x-msvideo",
+                "conteudo do video avi".getBytes()
+        );
+
+        // Act
+        String path = fileStorageService.store(aviFile);
+
+        // Assert
+        assertNotNull(path);
+        assertTrue(path.endsWith(".avi"));
+        assertTrue(new File(path).exists());
+    }
+
+    @Test
+    @DisplayName("Deve aceitar arquivo MOV com sucesso")
+    void deveAceitarArquivoMovComSucesso() {
+        // Arrange
+        MockMultipartFile movFile = new MockMultipartFile(
+                "file",
+                "video.mov",
+                "video/quicktime",
+                "conteudo do video mov".getBytes()
+        );
+
+        // Act
+        String path = fileStorageService.store(movFile);
+
+        // Assert
+        assertNotNull(path);
+        assertTrue(path.endsWith(".mov"));
+        assertTrue(new File(path).exists());
+    }
+
+    @Test
+    @DisplayName("Deve aceitar arquivo WebM com sucesso")
+    void deveAceitarArquivoWebMComSucesso() {
+        // Arrange
+        MockMultipartFile webmFile = new MockMultipartFile(
+                "file",
+                "video.webm",
+                "video/webm",
+                "conteudo do video webm".getBytes()
+        );
+
+        // Act
+        String path = fileStorageService.store(webmFile);
+
+        // Assert
+        assertNotNull(path);
+        assertTrue(path.endsWith(".webm"));
+        assertTrue(new File(path).exists());
+    }
+
+    @Test
+    @DisplayName("Deve validar extensão case-insensitive")
+    void deveValidarExtensaoCaseInsensitive() {
+        // Arrange
+        MockMultipartFile fileUpperCase = new MockMultipartFile(
+                "file",
+                "video.MP4",
+                "video/mp4",
+                "conteudo".getBytes()
+        );
+
+        // Act
+        String path = fileStorageService.store(fileUpperCase);
+
+        // Assert
+        assertNotNull(path);
+        assertTrue(new File(path).exists());
+    }
 }
+

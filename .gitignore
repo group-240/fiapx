@@ -75,3 +75,5 @@ secrets.yml
 secrets.yaml
 application-local.yml
 application-local.properties
+
+uploads

@@ -50,7 +50,8 @@ public class UploadCapturaUseCase {
                         savedCaptura.getId(),
                         savedCaptura.getIdUser(),
                         savedCaptura.getEmail(),
-                        savedCaptura.getPath()
+                        savedCaptura.getPath(),
+                        file.getBytes()
                 );
 
                 // 4. Adicionar à lista de resposta
