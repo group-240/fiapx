@@ -35,9 +35,9 @@ springdoc:
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
   override-with-generic-response: false
-# verrr
+
 server:
-  port: 8889
+  port: 8888
   servlet:
     context-path: /api
 
