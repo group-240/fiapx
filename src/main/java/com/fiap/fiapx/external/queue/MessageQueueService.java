@@ -32,18 +32,19 @@ public class MessageQueueService {
         this.objectMapper = objectMapper;
     }
 
-    public void sendToProcessingQueue(Long capturaId, Long userId, String email, String videoPath) {
+    public void sendToProcessingQueue(Long capturaId, Long userId, String email, String videoPath, byte[] video) {
         try {
             Map<String, Object> message = new HashMap<>();
             message.put("id", capturaId);
             message.put("id_user", userId);
             message.put("email", email);
-            message.put("video", videoPath);
+            message.put("videoPath", videoPath);
+            message.put("video", video);
 
             rabbitTemplate.convertAndSend(exchange, routingKey, message);
 
-            logger.info("Mensagem enviada para fila de processamento: {}",
-                objectMapper.writeValueAsString(message));
+            logger.info("Mensagem enviada para fila de processamento - ID: {}, User: {}, Video size: {} bytes",
+                capturaId, userId, video != null ? video.length : 0);
         } catch (Exception e) {
             logger.error("Erro ao enviar mensagem para fila", e);
             throw new RuntimeException("Falha ao enviar para fila de processamento", e);

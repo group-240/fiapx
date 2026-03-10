@@ -45,10 +45,11 @@ class MessageQueueServiceTest {
         Long userId = 1L;
         String email = "user@fiap.com.br";
         String videoPath = "./uploads/capturas/uuid.mp4";
+        byte[] video = "fake video content".getBytes();
 
         // Act
         assertDoesNotThrow(() -> {
-            messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath);
+            messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath, video);
         });
 
         // Assert
@@ -67,11 +68,12 @@ class MessageQueueServiceTest {
         Long userId = 5L;
         String email = "test@fiap.com.br";
         String videoPath = "./uploads/test.mp4";
+        byte[] video = "test video content".getBytes();
 
         ArgumentCaptor<Map> messageCaptor = ArgumentCaptor.forClass(Map.class);
 
         // Act
-        messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath);
+        messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath, video);
 
         // Assert
         verify(rabbitTemplate, times(1)).convertAndSend(
@@ -84,7 +86,8 @@ class MessageQueueServiceTest {
         assertEquals(capturaId, message.get("id"));
         assertEquals(userId, message.get("id_user"));
         assertEquals(email, message.get("email"));
-        assertEquals(videoPath, message.get("video"));
+        assertEquals(videoPath, message.get("videoPath"));
+        assertArrayEquals(video, (byte[]) message.get("video"));
     }
 
     @Test
@@ -95,9 +98,10 @@ class MessageQueueServiceTest {
         Long userId = 1L;
         String email = "user@fiap.com.br";
         String videoPath = "./uploads/capturas/uuid.mp4";
+        byte[] video = "video data".getBytes();
 
         // Act
-        messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath);
+        messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath, video);
 
         // Assert
         verify(rabbitTemplate, times(1)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -106,10 +110,13 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar diferentes IDs de captura")
     void deveAceitarDiferentesIDsDeCaptura() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(1L, 1L, "user1@fiap.com.br", "./video1.mp4");
-        messageQueueService.sendToProcessingQueue(2L, 1L, "user1@fiap.com.br", "./video2.mp4");
-        messageQueueService.sendToProcessingQueue(3L, 2L, "user2@fiap.com.br", "./video3.mp4");
+        messageQueueService.sendToProcessingQueue(1L, 1L, "user1@fiap.com.br", "./video1.mp4", video);
+        messageQueueService.sendToProcessingQueue(2L, 1L, "user1@fiap.com.br", "./video2.mp4", video);
+        messageQueueService.sendToProcessingQueue(3L, 2L, "user2@fiap.com.br", "./video3.mp4", video);
 
         // Assert
         verify(rabbitTemplate, times(3)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -118,10 +125,13 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar emails diferentes")
     void deveAceitarEmailsDiferentes() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(1L, 1L, "user1@fiap.com.br", "./video.mp4");
-        messageQueueService.sendToProcessingQueue(2L, 2L, "user2@example.com", "./video.mp4");
-        messageQueueService.sendToProcessingQueue(3L, 3L, "test@domain.com", "./video.mp4");
+        messageQueueService.sendToProcessingQueue(1L, 1L, "user1@fiap.com.br", "./video.mp4", video);
+        messageQueueService.sendToProcessingQueue(2L, 2L, "user2@example.com", "./video.mp4", video);
+        messageQueueService.sendToProcessingQueue(3L, 3L, "test@domain.com", "./video.mp4", video);
 
         // Assert
         verify(rabbitTemplate, times(3)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -130,10 +140,13 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar caminhos de arquivo diferentes")
     void deveAceitarCaminhosDeArquivoDiferentes() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(1L, 1L, "user@fiap.com.br", "./uploads/video1.mp4");
-        messageQueueService.sendToProcessingQueue(2L, 1L, "user@fiap.com.br", "/var/uploads/video2.mp4");
-        messageQueueService.sendToProcessingQueue(3L, 1L, "user@fiap.com.br", "C:\\uploads\\video3.mp4");
+        messageQueueService.sendToProcessingQueue(1L, 1L, "user@fiap.com.br", "./uploads/video1.mp4", video);
+        messageQueueService.sendToProcessingQueue(2L, 1L, "user@fiap.com.br", "/var/uploads/video2.mp4", video);
+        messageQueueService.sendToProcessingQueue(3L, 1L, "user@fiap.com.br", "C:\\uploads\\video3.mp4", video);
 
         // Assert
         verify(rabbitTemplate, times(3)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -142,13 +155,17 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve enviar múltiplas mensagens sem erro")
     void deveEnviarMultiplasMensagensSemErro() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
         for (int i = 1; i <= 10; i++) {
             messageQueueService.sendToProcessingQueue(
                     (long) i,
                     1L,
                     "user@fiap.com.br",
-                    "./uploads/video" + i + ".mp4"
+                    "./uploads/video" + i + ".mp4",
+                    video
             );
         }
 
@@ -159,8 +176,11 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar userId zero")
     void deveAceitarUserIdZero() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(1L, 0L, "user@fiap.com.br", "./video.mp4");
+        messageQueueService.sendToProcessingQueue(1L, 0L, "user@fiap.com.br", "./video.mp4", video);
 
         // Assert
         verify(rabbitTemplate, times(1)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -169,8 +189,11 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar capturaId zero")
     void deveAceitarCapturaIdZero() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(0L, 1L, "user@fiap.com.br", "./video.mp4");
+        messageQueueService.sendToProcessingQueue(0L, 1L, "user@fiap.com.br", "./video.mp4", video);
 
         // Assert
         verify(rabbitTemplate, times(1)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -179,8 +202,11 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar email vazio")
     void deveAceitarEmailVazio() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(1L, 1L, "", "./video.mp4");
+        messageQueueService.sendToProcessingQueue(1L, 1L, "", "./video.mp4", video);
 
         // Assert
         verify(rabbitTemplate, times(1)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -189,8 +215,11 @@ class MessageQueueServiceTest {
     @Test
     @DisplayName("Deve aceitar videoPath vazio")
     void deveAceitarVideoPathVazio() {
+        // Arrange
+        byte[] video = "video content".getBytes();
+
         // Act
-        messageQueueService.sendToProcessingQueue(1L, 1L, "user@fiap.com.br", "");
+        messageQueueService.sendToProcessingQueue(1L, 1L, "user@fiap.com.br", "", video);
 
         // Assert
         verify(rabbitTemplate, times(1)).convertAndSend(anyString(), anyString(), any(Map.class));
@@ -204,13 +233,14 @@ class MessageQueueServiceTest {
         Long userId = 1L;
         String email = "user@fiap.com.br";
         String videoPath = "./uploads/capturas/uuid.mp4";
+        byte[] video = "video content".getBytes();
 
         doThrow(new RuntimeException("Erro ao conectar com RabbitMQ"))
                 .when(rabbitTemplate).convertAndSend(anyString(), anyString(), any(Map.class));
 
         // Act & Assert
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath);
+            messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath, video);
         });
 
         assertTrue(exception.getMessage().contains("Falha ao enviar para fila de processamento"));
@@ -224,20 +254,22 @@ class MessageQueueServiceTest {
         Long userId = 88L;
         String email = "complete@test.com";
         String videoPath = "/path/to/video.mp4";
+        byte[] video = "complete video data".getBytes();
 
         ArgumentCaptor<Map> messageCaptor = ArgumentCaptor.forClass(Map.class);
 
         // Act
-        messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath);
+        messageQueueService.sendToProcessingQueue(capturaId, userId, email, videoPath, video);
 
         // Assert
         verify(rabbitTemplate).convertAndSend(anyString(), anyString(), messageCaptor.capture());
 
         Map<String, Object> message = messageCaptor.getValue();
-        assertEquals(4, message.size());
+        assertEquals(5, message.size());
         assertTrue(message.containsKey("id"));
         assertTrue(message.containsKey("id_user"));
         assertTrue(message.containsKey("email"));
+        assertTrue(message.containsKey("videoPath"));
         assertTrue(message.containsKey("video"));
     }
 }
