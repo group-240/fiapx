@@ -158,11 +158,10 @@
             <version>${aws.sdk.version}</version>
         </dependency>
 
-        <!-- AWS SDK v2 — SQS -->
+        <!-- RabbitMQ -->
         <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>sqs</artifactId>
-            <version>${aws.sdk.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
         <!-- Micrometer Prometheus registry — expõe /actuator/prometheus -->

@@ -19,6 +19,11 @@ spring:
       enabled: true
       max-file-size: 100MB
       max-request-size: 500MB
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
 
 # Swagger/OpenAPI configuration
 springdoc:
@@ -55,10 +60,13 @@ logging:
 # AWS
 aws:
   region: ${AWS_REGION:us-east-1}
-  sqs:
-    queue-url: ${SQS_QUEUE_URL}
   s3:
     bucket: ${S3_BUCKET}
+
+rabbitmq:
+  queue: ${RABBITMQ_QUEUE:video-processing-queue}
+  exchange: ${RABBITMQ_EXCHANGE:video-processing-exchange}
+  routing-key: ${RABBITMQ_ROUTING_KEY:video.processing}
 
 # Configurações de Capturas de Vídeo
 capturas:

@@ -1,12 +1,10 @@
 package com.fiap.fiapx.external.queue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,15 +14,16 @@ public class MessageQueueService {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageQueueService.class);
 
-    private final SqsClient sqsClient;
-    private final ObjectMapper objectMapper;
+    private final RabbitTemplate rabbitTemplate;
 
-    @Value("${aws.sqs.queue-url}")
-    private String queueUrl;
+    @Value("${rabbitmq.exchange:video-processing-exchange}")
+    private String exchange;
 
-    public MessageQueueService(SqsClient sqsClient, ObjectMapper objectMapper) {
-        this.sqsClient = sqsClient;
-        this.objectMapper = objectMapper;
+    @Value("${rabbitmq.routing-key:video.processing}")
+    private String routingKey;
+
+    public MessageQueueService(RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public void sendToProcessingQueue(Long capturaId, Long userId, String email, String s3Key) {
@@ -35,20 +34,11 @@ public class MessageQueueService {
             payload.put("email", email);
             payload.put("s3Key", s3Key);
 
-            String messageBody = objectMapper.writeValueAsString(payload);
-
-            SendMessageRequest request = SendMessageRequest.builder()
-                    .queueUrl(queueUrl)
-                    .messageBody(messageBody)
-                    .messageGroupId("video-processing")
-                    .messageDeduplicationId(capturaId.toString())
-                    .build();
-
-            sqsClient.sendMessage(request);
-            logger.info("Mensagem enviada para SQS — capturaId={} s3Key={}", capturaId, s3Key);
+            rabbitTemplate.convertAndSend(exchange, routingKey, payload);
+            logger.info("Mensagem enviada para RabbitMQ — capturaId={} s3Key={}", capturaId, s3Key);
 
         } catch (Exception e) {
-            logger.error("Erro ao enviar mensagem para SQS — capturaId={}: {}", capturaId, e.getMessage());
+            logger.error("Erro ao enviar mensagem para RabbitMQ — capturaId={}: {}", capturaId, e.getMessage());
             throw new RuntimeException("Falha ao enfileirar vídeo para processamento", e);
         }
     }
