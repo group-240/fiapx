@@ -73,3 +73,9 @@ rabbitmq:
   exchange: ${RABBITMQ_EXCHANGE:video-processing-exchange}
   routing-key: ${RABBITMQ_ROUTING_KEY:video.processing}
 
+# Configurações de integração externa
+external:
+  frames-service:
+    base-url: ${FRAMES_SERVICE_URL:http://localhost:8080}
+    download-endpoint: /api/capturas/download
+

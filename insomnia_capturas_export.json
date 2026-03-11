@@ -1,20 +1,21 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-02-06T22:20:00Z",
+  "__export_date": "2026-03-11T01:42:00Z",
   "__export_source": "insomnia.desktop.app:2026.1.0",
   "resources": [
     {
       "_id": "wrk_capturas",
       "_type": "workspace",
       "name": "Capturas FIAPX",
-      "description": "Coleção para testar endpoints de capturas"
+      "description": "Coleção completa para testar endpoints de capturas de vídeo.\n\n**Microserviço:** FIAPX API\n**Base URL:** http://localhost:8888/api\n**Recursos:** Upload, listagem, download e atualização de status de capturas"
     },
     {
       "_id": "req_health",
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "Health",
+      "description": "Verifica se a aplicação está rodando e saudável.\n\n**Retorna:**\n- status: UP (quando saudável)\n- application: Nome da aplicação",
       "method": "GET",
       "url": "http://localhost:8888/api/health",
       "headers": [],
@@ -26,6 +27,7 @@
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "Test Hello",
+      "description": "Endpoint de teste simples para verificar conectividade.",
       "method": "GET",
       "url": "http://localhost:8888/api/test/hello",
       "headers": [],
@@ -37,6 +39,7 @@
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "List Capturas",
+      "description": "Lista todas as capturas de vídeo do usuário.\n\n**Retorna:**\n- id: ID da captura\n- status: PENDENTE, PROCESSANDO, CONCLUIDO, ERRO\n- email: Email do usuário\n- createdAt: Data de criação\n- updatedAt: Data de atualização",
       "method": "GET",
       "url": "http://localhost:8888/api/capturas/list?userId=1",
       "headers": [
@@ -50,6 +53,7 @@
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "Upload Capturas (multipart)",
+      "description": "Faz upload de um ou mais vídeos para processamento.\n\n**Parâmetros:**\n- userId: ID do usuário (query param)\n- email: Email para notificações (query param)\n- files: Arquivo(s) de vídeo (multipart)\n\n**Formatos aceitos:** MP4, AVI, MOV\n**Tamanho máximo:** 100MB por arquivo",
       "method": "POST",
       "url": "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br",
       "headers": [
@@ -73,6 +77,7 @@
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "Upload Múltiplo (multipart)",
+      "description": "Faz upload de múltiplos vídeos simultaneamente.\n\n**Vantagens:**\n- Processa vários vídeos de uma vez\n- Todos compartilham o mesmo userId e email\n- Cada vídeo recebe um ID único\n\n**Obs:** Use o mesmo nome 'files' para todos os arquivos.",
       "method": "POST",
       "url": "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br",
       "headers": [
@@ -102,6 +107,7 @@
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "Download Captura",
+      "description": "Faz o download do arquivo ZIP com frames processados.\n\n**Headers de Resposta Customizados:**\n- X-Download-Message: Mensagem de sucesso do download\n- X-Download-Filename: Nome do arquivo\n- X-Download-Size: Tamanho em bytes\n- Content-Type: application/zip\n- Content-Disposition: attachment com nome do arquivo\n\n**Como visualizar:**\n1. Faça a requisição\n2. Clique na aba 'Headers' na resposta\n3. Procure pelos headers X-Download-*\n4. O arquivo será baixado automaticamente",
       "method": "GET",
       "url": "http://localhost:8888/api/capturas/download/1?userId=1",
       "headers": [],
@@ -113,6 +119,7 @@
       "parentId": "wrk_capturas",
       "_type": "request",
       "name": "Update Status",
+      "description": "Atualiza o status de uma captura.\n\n**Status válidos:**\n- PENDENTE: Aguardando processamento\n- PROCESSANDO: Em processamento\n- CONCLUIDO: Processamento finalizado\n- ERRO: Erro no processamento\n\n**Exemplo de uso:**\nEste endpoint é chamado pelo microserviço de processamento de vídeos para notificar mudanças de status.",
       "method": "PUT",
       "url": "http://localhost:8888/api/capturas/update-status/1",
       "headers": [
