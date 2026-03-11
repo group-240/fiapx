@@ -4,6 +4,9 @@ import com.fiap.fiapx.domain.entities.Captura;
 import com.fiap.fiapx.domain.entities.CapturaStatus;
 import com.fiap.fiapx.domain.exception.CapturaNotFoundException;
 import com.fiap.fiapx.domain.exception.UnauthorizedAccessException;
+import com.fiap.fiapx.domain.exception.VideoProcessingErrorException;
+import com.fiap.fiapx.domain.exception.VideoProcessingException;
+import com.fiap.fiapx.domain.ports.FramesServicePort;
 import com.fiap.fiapx.domain.repositories.CapturaRepository;
 import com.fiap.fiapx.external.storage.FileStorageService;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,6 +33,9 @@ class DownloadCapturaUseCaseTest {
 
     @Mock
     private FileStorageService fileStorageService;
+
+    @Mock
+    private FramesServicePort framesServicePort;
 
     @InjectMocks
     private DownloadCapturaUseCase downloadCapturaUseCase;
@@ -210,5 +218,118 @@ class DownloadCapturaUseCaseTest {
 
         verify(capturaRepository, times(1)).findById(1L);
         verify(capturaRepository, times(1)).findById(2L);
+    }
+
+    @Test
+    @DisplayName("Deve fazer download de frames zip com sucesso quando status é CONCLUIDO")
+    void deveFazerDownloadFramesZipComSucesso() {
+        // Arrange
+        byte[] zipData = "PK\u0003\u0004test".getBytes();
+        InputStream inputStream = new ByteArrayInputStream(zipData);
+        
+        captura.setStatus(CapturaStatus.CONCLUIDO);
+        
+        when(capturaRepository.findById(1L)).thenReturn(Optional.of(captura));
+        when(framesServicePort.downloadFramesZip(1L)).thenReturn(inputStream);
+
+        // Act
+        InputStream result = downloadCapturaUseCase.downloadFramesZip(1L, 1L);
+
+        // Assert
+        assertNotNull(result);
+        verify(capturaRepository, times(1)).findById(1L);
+        verify(framesServicePort, times(1)).downloadFramesZip(1L);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando status é PENDENTE")
+    void deveLancarExcecaoQuandoStatusPendente() {
+        // Arrange
+        captura.setStatus(CapturaStatus.PENDENTE);
+        
+        when(capturaRepository.findById(1L)).thenReturn(Optional.of(captura));
+
+        // Act & Assert
+        VideoProcessingException exception = assertThrows(
+                VideoProcessingException.class,
+                () -> downloadCapturaUseCase.downloadFramesZip(1L, 1L)
+        );
+
+        assertTrue(exception.getMessage().contains("Vídeo em processamento ainda"));
+        verify(capturaRepository, times(1)).findById(1L);
+        verify(framesServicePort, never()).downloadFramesZip(anyLong());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando status é PROCESSANDO")
+    void deveLancarExcecaoQuandoStatusProcessando() {
+        // Arrange
+        captura.setStatus(CapturaStatus.PROCESSANDO);
+        
+        when(capturaRepository.findById(1L)).thenReturn(Optional.of(captura));
+
+        // Act & Assert
+        VideoProcessingException exception = assertThrows(
+                VideoProcessingException.class,
+                () -> downloadCapturaUseCase.downloadFramesZip(1L, 1L)
+        );
+
+        assertTrue(exception.getMessage().contains("Vídeo em processamento ainda"));
+        verify(capturaRepository, times(1)).findById(1L);
+        verify(framesServicePort, never()).downloadFramesZip(anyLong());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando status é ERRO")
+    void deveLancarExcecaoQuandoStatusErro() {
+        // Arrange
+        captura.setStatus(CapturaStatus.ERRO);
+        
+        when(capturaRepository.findById(1L)).thenReturn(Optional.of(captura));
+
+        // Act & Assert
+        VideoProcessingErrorException exception = assertThrows(
+                VideoProcessingErrorException.class,
+                () -> downloadCapturaUseCase.downloadFramesZip(1L, 1L)
+        );
+
+        assertTrue(exception.getMessage().contains("Erro no processamento do vídeo"));
+        verify(capturaRepository, times(1)).findById(1L);
+        verify(framesServicePort, never()).downloadFramesZip(anyLong());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção no downloadFramesZip quando captura não encontrada")
+    void deveLancarExcecaoNoDownloadFramesZipQuandoCapturaNaoEncontrada() {
+        // Arrange
+        when(capturaRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        CapturaNotFoundException exception = assertThrows(
+                CapturaNotFoundException.class,
+                () -> downloadCapturaUseCase.downloadFramesZip(1L, 1L)
+        );
+
+        assertTrue(exception.getMessage().contains("Captura com ID 1 não encontrada"));
+        verify(capturaRepository, times(1)).findById(1L);
+        verify(framesServicePort, never()).downloadFramesZip(anyLong());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção no downloadFramesZip quando usuário não autorizado")
+    void deveLancarExcecaoNoDownloadFramesZipQuandoUsuarioNaoAutorizado() {
+        // Arrange
+        captura.setStatus(CapturaStatus.CONCLUIDO);
+        when(capturaRepository.findById(1L)).thenReturn(Optional.of(captura));
+
+        // Act & Assert
+        UnauthorizedAccessException exception = assertThrows(
+                UnauthorizedAccessException.class,
+                () -> downloadCapturaUseCase.downloadFramesZip(1L, 2L)
+        );
+
+        assertEquals("Você não tem permissão para acessar esta captura", exception.getMessage());
+        verify(capturaRepository, times(1)).findById(1L);
+        verify(framesServicePort, never()).downloadFramesZip(anyLong());
     }
 }
