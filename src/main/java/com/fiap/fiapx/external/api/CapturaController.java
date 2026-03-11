@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,7 +23,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -135,28 +137,50 @@ public class CapturaController {
     }
 
     @GetMapping("/download/{id}")
-    @Operation(summary = "Download de vídeo", description = "Permite o download do vídeo da captura")
+    @Operation(summary = "Download de vídeo processado", description = "Permite o download do arquivo ZIP com os frames processados do vídeo")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Arquivo retornado com sucesso"),
+        @ApiResponse(responseCode = "200", description = "Arquivo ZIP retornado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Vídeo em processamento ou erro no processamento"),
         @ApiResponse(responseCode = "403", description = "Acesso não autorizado"),
-        @ApiResponse(responseCode = "404", description = "Captura não encontrada")
+        @ApiResponse(responseCode = "404", description = "Captura não encontrada"),
+        @ApiResponse(responseCode = "503", description = "Serviço de processamento indisponível")
     })
     public ResponseEntity<Resource> download(
-            @Parameter(description = "ID da captura", required = true)
+            @Parameter(description = "ID da captura/transação", required = true)
             @PathVariable Long id,
 
             @Parameter(description = "ID do usuário (simulado para testes)", example = "1")
-            @RequestParam(defaultValue = "1") Long userId) {
+            @RequestParam(defaultValue = "1") Long userId) throws IOException {
 
-        File file = downloadCapturaUseCase.execute(id, userId);
+        InputStream zipStream = downloadCapturaUseCase.downloadFramesZip(id, userId);
 
-        Resource resource = new FileSystemResource(file);
+        // Converter InputStream para byte array para garantir Content-Length correto
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int nRead;
+        byte[] data = new byte[16384];
 
-        String filename = file.getName();
+        while ((nRead = zipStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+
+        buffer.flush();
+        byte[] zipBytes = buffer.toByteArray();
+        zipStream.close();
+
+        ByteArrayResource resource = new ByteArrayResource(zipBytes);
+
+        String filename = "frames_" + id + ".zip";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header("X-Download-Message", "Download concluido com sucesso!")
+                .header("X-Download-Filename", filename)
+                .header("X-Download-Size", String.valueOf(zipBytes.length))
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
+                .contentLength(zipBytes.length)
+                .contentType(MediaType.parseMediaType("application/zip"))
                 .body(resource);
     }
 
