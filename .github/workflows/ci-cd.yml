@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [fix]
+    branches: [fix, main]
   pull_request:
-    branches: [fix]
+    branches: [fix, main]
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
