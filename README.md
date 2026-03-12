@@ -1,343 +1,127 @@
-# Módulo de Gerenciamento de Capturas de Vídeo
+# FIAPX API (`fiapx`)
 
-## Visão Geral
-Módulo completo para gerenciamento de capturas de vídeo com upload, listagem, download e processamento assíncrono, seguindo os princípios de **Arquitetura Limpa**.
+API principal do ecossistema FIAPX. Este serviço recebe uploads de vídeo, persiste metadados no PostgreSQL, armazena os arquivos no S3 e publica eventos no RabbitMQ para processamento assíncrono pelo `fiapx-ms-processing`.
 
-## Arquitetura
+---
 
-```
+## Responsabilidade no sistema
+
+- Expor endpoints REST para o cliente (upload, listagem, download e status)
+- Persistir estado da transação de vídeo no banco relacional
+- Validar arquivo enviado (tamanho/tipo/extensão)
+- Enviar mensagens para a fila de processamento
+- Proteger API e expor métricas/saúde para observabilidade
+
+---
+
+## Arquitetura (Clean Architecture)
+
+```text
 src/main/java/com/fiap/fiapx/
-├── domain/                           # Camada de Domínio (Regras de Negócio)
-│   ├── entities/
-│   │   ├── Captura.java             # Entidade de domínio
-│   │   └── CapturaStatus.java       # Enum de status
-│   ├── repositories/
-│   │   └── CapturaRepository.java   # Interface de repositório
-│   └── exception/
-│       ├── CapturaNotFoundException.java
-│       ├── InvalidFileException.java
-│       └── UnauthorizedAccessException.java
-│
-├── application/                      # Camada de Aplicação (Casos de Uso)
-│   ├── usecases/
-│   │   ├── UploadCapturaUseCase.java
-│   │   ├── ListCapturasUseCase.java
-│   │   ├── DownloadCapturaUseCase.java
-│   │   └── UpdateCapturaStatusUseCase.java
-│   └── dto/
-│       ├── CapturaDTO.java
-│       ├── UpdateStatusRequest.java
-│       └── UploadResponse.java
-│
-├── adapters/                         # Camada de Adaptadores
-│   └── gateway/
-│       └── CapturaRepositoryImpl.java
-│
-└── external/                         # Camada Externa (Frameworks)
-    ├── api/
-    │   ├── CapturaController.java
-    │   └── GlobalExceptionHandler.java
-    ├── datasource/
-    │   ├── entities/
-    │   │   └── CapturaEntity.java
-    │   └── repositories/
-    │       └── JpaCapturaRepository.java
-    ├── storage/
-    │   └── FileStorageService.java
-    └── queue/
-        └── MessageQueueService.java
+├── domain/        -> Entidades, regras e exceções de domínio
+├── application/   -> Casos de uso (upload/list/download/update)
+├── adapters/      -> Implementações de gateway (persistência)
+├── external/      -> API REST, storage S3, queue RabbitMQ, datasource
+├── config/        -> Segurança, AWS, RabbitMQ, Swagger
+└── controller/    -> Endpoints auxiliares (health/test)
 ```
 
-## Banco de Dados
+### Componentes chave
 
-### Tabela: capturas
+- `CapturaController`: endpoints funcionais de capturas
+- `UploadCapturaUseCase`: orquestra upload + persistência + fila
+- `FileStorageService`: upload/download em S3
+- `MessageQueueService`: publicação no RabbitMQ
+- `GlobalExceptionHandler`: padronização de erros
 
-| Campo      | Tipo          | Descrição                              |
-|------------|---------------|----------------------------------------|
-| id         | BIGINT        | Identificador único (auto-incremento)  |
-| id_user    | BIGINT        | ID do usuário                          |
-| email      | VARCHAR       | Email do usuário                       |
-| status     | VARCHAR(20)   | Status da captura (enum)               |
-| path       | VARCHAR       | Caminho do arquivo                     |
-| created_at | TIMESTAMP     | Data de criação                        |
-| updated_at | TIMESTAMP     | Data de atualização                    |
+---
 
-### Status Disponíveis
-- `PENDENTE` - Captura pendente de processamento
-- `PROCESSANDO` - Captura em processamento
-- `CONCLUIDO` - Processamento concluído
-- `ERRO` - Erro no processamento
+## Endpoints principais
 
-## API REST
+Base pública no cluster: `http://<LB>/api`
 
-### Base URL
-```
-http://localhost:8888/api/capturas
-```
+| Método | Rota | Responsável por |
+|---|---|---|
+| `GET` | `/health` | Health check da aplicação |
+| `GET` | `/test/hello` | Sanidade rápida de API |
+| `POST` | `/capturas/upload?userId=...&email=...` | Upload de um ou mais vídeos |
+| `GET` | `/capturas/list?userId=...` | Listagem de capturas por usuário |
+| `GET` | `/capturas/download/{id}?userId=...` | Download do ZIP processado |
+| `PUT` | `/capturas/update-status/{id}` | Atualização de status (integração interna) |
 
-### Endpoints
+Swagger:
+- `/api/swagger-ui.html`
+- `/api/api-docs`
 
-#### 1. Upload de Vídeos
-```http
-POST /upload
-Content-Type: multipart/form-data
-```
+Actuator/Prometheus:
+- `/api/actuator/health`
+- `/api/actuator/prometheus`
 
-**Query Parameters:**
-- `userId` (Long) - ID do usuário
-- `email` (String) - Email do usuário
+---
 
-**Form Data:**
-- `files` (MultipartFile[]) - Um ou mais arquivos de vídeo
+## Fluxo ponta a ponta
 
-**Exemplo:**
-```bash
-curl -X POST "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br" \
-  -F "files=@video1.mp4;type=video/mp4" \
-  -F "files=@video2.mp4;type=video/mp4"
-```
+1. Cliente envia vídeo em `POST /api/capturas/upload`
+2. `FileStorageService` salva no S3 (`uploads/{uuid}.mp4`)
+3. `UploadCapturaUseCase` grava registro em `capturas` com status inicial
+4. `MessageQueueService` publica evento no RabbitMQ
+5. `fiapx-ms-processing` consome, extrai frames e atualiza status
+6. Cliente consulta em `/api/capturas/list` e baixa em `/api/capturas/download/{id}`
 
-**Resposta:**
-```json
-{
-  "message": "Upload realizado com sucesso",
-  "capturas": [
-    {
-      "id": 1,
-      "idUser": 1,
-      "email": "user@fiap.com.br",
-      "status": "PROCESSANDO",
-      "path": "./uploads/capturas/uuid.mp4",
-      "createdAt": "2026-02-06T22:10:29.679377",
-      "updatedAt": "2026-02-06T22:10:29.679386"
-    }
-  ],
-  "totalFiles": 1
-}
-```
+---
 
-#### 2. Listar Capturas
-```http
-GET /list?userId={userId}
-```
+## Variáveis de ambiente importantes
 
-**Exemplo:**
-```bash
-curl "http://localhost:8888/api/capturas/list?userId=1"
+| Variável | Uso |
+|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexão PostgreSQL |
+| `AWS_REGION`, `S3_BUCKET` | Acesso ao S3 |
+| `RABBITMQ_HOST`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD` | Conexão RabbitMQ |
+| `RABBITMQ_QUEUE`, `RABBITMQ_EXCHANGE`, `RABBITMQ_ROUTING_KEY` | Roteamento de mensagens |
+| `CAPTURAS_MAX_VIDEO_SIZE` | Limite de tamanho do upload |
+
+---
+
+## Banco de dados (referência de schema)
+
+> O projeto usa JPA com `ddl-auto=update`. Abaixo um DDL de referência para entrega/documentação.
+
+```sql
+CREATE TABLE IF NOT EXISTS capturas (
+  id BIGSERIAL PRIMARY KEY,
+  id_user BIGINT NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  path VARCHAR(1024) NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP NOT NULL
+);
 ```
 
-**Resposta:**
-```json
-[
-  {
-    "id": 1,
-    "idUser": 1,
-    "email": "user@fiap.com.br",
-    "status": "CONCLUIDO",
-    "path": "./uploads/capturas/uuid.mp4",
-    "createdAt": "2026-02-06T22:10:29.679377",
-    "updatedAt": "2026-02-06T22:10:36.533675"
-  }
-]
-```
+---
 
-#### 3. Download de Vídeo
-```http
-GET /download/{id}?userId={userId}
-```
+## Testes de API
 
-**Exemplo:**
-```bash
-curl -O "http://localhost:8888/api/capturas/download/1?userId=1"
-```
+- Insomnia: `insomnia_capturas_export.json`
+- Bruno: pasta `Capturas FIAPX/` com fluxo E2E ordenado
 
-**Resposta:** Arquivo binário com headers:
-```
-Content-Disposition: attachment; filename="uuid.mp4"
-Content-Type: application/octet-stream
-```
+Ordem sugerida:
+1. `01 - Health`
+2. `03 - Upload`
+3. `04 - List` (polling)
+4. `05 - Download ZIP`
 
-#### 4. Atualizar Status
-```http
-PUT /update-status/{id}
-Content-Type: application/json
-```
+---
 
-**Body:**
-```json
-{
-  "status": "CONCLUIDO"
-}
-```
+## CI/CD
 
-**Exemplo:**
-```bash
-curl -X PUT "http://localhost:8888/api/capturas/update-status/1" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "CONCLUIDO"}'
-```
+Workflow: `.github/workflows/ci-cd.yml`
 
-## Variáveis de Ambiente
+- Build Maven (com `-Dmaven.test.skip=true` no pipeline)
+- Build/push imagem para ECR
+- Apply do deployment no EKS
+- Rollout status
 
-### Configuração de Storage
-```yaml
-CAPTURAS_STORAGE_DISK=local          # Tipo de storage (local ou s3 no futuro)
-CAPTURAS_STORAGE_PATH=./uploads/capturas  # Caminho local de armazenamento
-CAPTURAS_MAX_VIDEO_SIZE=100          # Tamanho máximo em MB
-```
-
-### Configuração no application.yml
-```yaml
-capturas:
-  storage:
-    disk: ${CAPTURAS_STORAGE_DISK:local}
-    local-path: ${CAPTURAS_STORAGE_PATH:./uploads/capturas}
-  max-video-size: ${CAPTURAS_MAX_VIDEO_SIZE:100}
-
-spring:
-  servlet:
-    multipart:
-      enabled: true
-      max-file-size: 100MB
-      max-request-size: 500MB
-```
-
-## Fluxo de Upload e Processamento
-
-1. **Recebimento**: Controller recebe um ou múltiplos arquivos
-2. **Validação**: FileStorageService valida tamanho e tipo
-3. **Armazenamento**: Arquivo salvo localmente com UUID único
-4. **Registro**: Captura criada no banco com status `PROCESSANDO`
-5. **Fila**: Mensagem enviada para fila de processamento assíncrono
-6. **Payload da Fila**:
-```json
-{
-  "id": 1,
-  "id_user": 1,
-  "email": "user@fiap.com.br",
-  "video": "./uploads/capturas/uuid.mp4"
-}
-```
-
-## Segurança e Validações
-
-### Validações Implementadas
-- ✅ Validação de tipo de arquivo (apenas vídeos)
-- ✅ Validação de tamanho máximo configurável
-- ✅ Validação de propriedade (usuário só acessa suas capturas)
-- ✅ Validação de existência de captura
-
-### Controle de Acesso
-- Listagem: Retorna apenas capturas do usuário autenticado
-- Download: Valida se a captura pertence ao usuário solicitante
-- Resposta 403 (Forbidden) em caso de acesso não autorizado
-
-## Testes Realizados
-
-### 1. Upload Único
-```bash
-curl -X POST "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br" \
-  -F "files=@video.mp4;type=video/mp4"
-```
-✅ Status: 200 OK
-
-### 2. Upload Múltiplo
-```bash
-curl -X POST "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br" \
-  -F "files=@video1.mp4;type=video/mp4" \
-  -F "files=@video2.mp4;type=video/mp4"
-```
-✅ Status: 200 OK - 2 capturas criadas
-
-### 3. Listagem
-```bash
-curl "http://localhost:8888/api/capturas/list?userId=1"
-```
-✅ Status: 200 OK - Retornou 3 capturas
-
-### 4. Download Autorizado
-```bash
-curl -I "http://localhost:8888/api/capturas/download/1?userId=1"
-```
-✅ Status: 200 OK
-
-### 5. Download Não Autorizado
-```bash
-curl "http://localhost:8888/api/capturas/download/1?userId=2"
-```
-✅ Status: 403 Forbidden - Mensagem: "Você não tem permissão para acessar esta captura"
-
-### 6. Atualização de Status
-```bash
-curl -X PUT "http://localhost:8888/api/capturas/update-status/1" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "CONCLUIDO"}'
-```
-✅ Status: 200 OK - Status atualizado
-
-### 7. Processamento Assíncrono
-✅ Logs confirmam envio para fila:
-```
-INFO c.f.f.e.queue.MessageQueueService : Mensagem enviada para fila de processamento
-```
-
-## Swagger UI
-
-Acesse a documentação interativa em:
-```
-http://localhost:8888/api/swagger-ui/index.html
-```
-
-## Migração Futura para AWS S3
-
-A arquitetura está preparada para migração para S3:
-
-1. Atualizar `CAPTURAS_STORAGE_DISK=s3`
-2. Implementar novo `S3StorageService`
-3. Configurar credenciais AWS
-4. Nenhuma alteração nas regras de negócio necessária
-
-### Exemplo de Implementação S3 (Futuro)
-```java
-@Service
-@ConditionalOnProperty(name = "capturas.storage.disk", havingValue = "s3")
-public class S3StorageService implements StorageService {
-    @Value("${aws.s3.bucket}")
-    private String bucketName;
-
-    // Implementação com AWS SDK
-}
-```
-
-## Docker
-
-### Executar a aplicação
-```bash
-docker-compose up --build -d
-```
-
-### Verificar logs
-```bash
-docker-compose logs -f app
-```
-
-### Parar containers
-```bash
-docker-compose down
-```
-
-## Resumo de Funcionalidades Implementadas
-
-✅ Tabela `capturas` com todos os campos solicitados
-✅ Endpoints REST: GET /list, GET /download/{id}, PUT /update-status/{id}, POST /upload
-✅ Upload único e múltiplo de vídeos
-✅ Validação de tamanho configurável
-✅ Validação de tipo de arquivo
-✅ Storage local funcional
-✅ Processamento assíncrono com fila
-✅ Controle de acesso por usuário
-✅ Arquitetura limpa totalmente implementada
-✅ Variáveis de ambiente configuráveis
-✅ Documentação Swagger
-✅ Tratamento de exceções global
-✅ Preparado para migração futura S3
+Branches com gatilho automático:
+- `fix`
+- `main`
