@@ -1,8 +1,11 @@
 package com.fiap.fiapx.external.api;
 
 import com.fiap.fiapx.domain.exception.CapturaNotFoundException;
+import com.fiap.fiapx.domain.exception.ExternalServiceUnavailableException;
 import com.fiap.fiapx.domain.exception.InvalidFileException;
 import com.fiap.fiapx.domain.exception.UnauthorizedAccessException;
+import com.fiap.fiapx.domain.exception.VideoProcessingErrorException;
+import com.fiap.fiapx.domain.exception.VideoProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -134,5 +137,62 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().get("message").toString().contains("Erro em tempo de execução"));
+    }
+
+    @Test
+    @DisplayName("Deve tratar VideoProcessingException corretamente")
+    void deveTratarVideoProcessingException() {
+        // Arrange
+        VideoProcessingException exception = new VideoProcessingException("Vídeo em processamento ainda. Por favor, aguarde a conclusão.");
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleVideoProcessing(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().get("status"));
+        assertEquals("Bad Request", response.getBody().get("error"));
+        assertEquals("Vídeo em processamento ainda. Por favor, aguarde a conclusão.", response.getBody().get("message"));
+        assertNotNull(response.getBody().get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("Deve tratar VideoProcessingErrorException corretamente")
+    void deveTratarVideoProcessingErrorException() {
+        // Arrange
+        VideoProcessingErrorException exception = new VideoProcessingErrorException("Erro no processamento do vídeo. Não é possível realizar o download.");
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleVideoProcessingError(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().get("status"));
+        assertEquals("Bad Request", response.getBody().get("error"));
+        assertEquals("Erro no processamento do vídeo. Não é possível realizar o download.", response.getBody().get("message"));
+        assertNotNull(response.getBody().get("timestamp"));
+    }
+
+    @Test
+    @DisplayName("Deve tratar ExternalServiceUnavailableException corretamente")
+    void deveTratarExternalServiceUnavailableException() {
+        // Arrange
+        ExternalServiceUnavailableException exception = new ExternalServiceUnavailableException("O serviço de processamento de vídeos está temporariamente indisponível.");
+
+        // Act
+        ResponseEntity<Map<String, Object>> response = exceptionHandler.handleExternalServiceUnavailable(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(503, response.getBody().get("status"));
+        assertEquals("Service Unavailable", response.getBody().get("error"));
+        assertEquals("O serviço de processamento de vídeos está temporariamente indisponível.", response.getBody().get("message"));
+        assertNotNull(response.getBody().get("timestamp"));
     }
 }

@@ -73,6 +73,12 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- RabbitMQ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- Database - PostgreSQL é o único banco de dados utilizado nesta aplicação -->
         <dependency>
             <groupId>org.postgresql</groupId>

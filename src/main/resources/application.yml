@@ -32,6 +32,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
     operationsSorter: method
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+  override-with-generic-response: false
 
 server:
   port: 8888
@@ -63,11 +66,16 @@ aws:
   s3:
     bucket: ${S3_BUCKET}
 
-rabbitmq:
-  queue: ${RABBITMQ_QUEUE:video-processing-queue}
-  exchange: ${RABBITMQ_EXCHANGE:video-processing-exchange}
-  routing-key: ${RABBITMQ_ROUTING_KEY:video.processing}
-
 # Configurações de Capturas de Vídeo
 capturas:
+  storage:
+    disk: ${CAPTURAS_STORAGE_DISK:local}  # local ou s3 (futuro)
+    local-path: ${CAPTURAS_STORAGE_PATH:./uploads/capturas}
   max-video-size: ${CAPTURAS_MAX_VIDEO_SIZE:100}  # Tamanho máximo em MB
+
+# Configurações de integração externa
+external:
+  frames-service:
+    base-url: ${FRAMES_SERVICE_URL:http://localhost:8080}
+    download-endpoint: /api/capturas/download
+

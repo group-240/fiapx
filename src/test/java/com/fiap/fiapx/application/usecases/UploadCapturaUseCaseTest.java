@@ -20,7 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,7 +81,7 @@ class UploadCapturaUseCaseTest {
         verify(fileStorageService, times(1)).store(any(MultipartFile.class));
         verify(capturaRepository, times(1)).save(any(Captura.class));
         verify(messageQueueService, times(1)).sendToProcessingQueue(
-                eq(1L), eq(1L), eq("user@fiap.com.br"), eq("./uploads/capturas/uuid.mp4")
+                eq(1L), eq(1L), eq("user@fiap.com.br"), eq("./uploads/capturas/uuid.mp4"), any()
         );
     }
 
@@ -124,7 +124,7 @@ class UploadCapturaUseCaseTest {
         verify(fileStorageService, times(2)).store(any(MultipartFile.class));
         verify(capturaRepository, times(2)).save(any(Captura.class));
         verify(messageQueueService, times(2)).sendToProcessingQueue(
-                anyLong(), eq(1L), eq("user@fiap.com.br"), anyString()
+                anyLong(), eq(1L), eq("user@fiap.com.br"), anyString(), any()
         );
     }
 
@@ -166,10 +166,11 @@ class UploadCapturaUseCaseTest {
 
         // Assert
         verify(messageQueueService, times(1)).sendToProcessingQueue(
-                1L,
-                1L,
-                "user@fiap.com.br",
-                "./uploads/capturas/uuid.mp4"
+                eq(1L),
+                eq(1L),
+                eq("user@fiap.com.br"),
+                eq("./uploads/capturas/uuid.mp4"),
+                any()
         );
     }
 
@@ -189,7 +190,7 @@ class UploadCapturaUseCaseTest {
         assertTrue(exception.getMessage().contains("Erro ao processar arquivo"));
         verify(capturaRepository, never()).save(any(Captura.class));
         verify(messageQueueService, never()).sendToProcessingQueue(
-                anyLong(), anyLong(), anyString(), anyString()
+                anyLong(), anyLong(), anyString(), anyString(), any()
         );
     }
 
@@ -210,7 +211,7 @@ class UploadCapturaUseCaseTest {
 
         assertTrue(exception.getMessage().contains("Erro ao processar arquivo"));
         verify(messageQueueService, never()).sendToProcessingQueue(
-                anyLong(), anyLong(), anyString(), anyString()
+                anyLong(), anyLong(), anyString(), anyString(), any()
         );
     }
 
@@ -253,7 +254,7 @@ class UploadCapturaUseCaseTest {
         verify(fileStorageService, never()).store(any(MultipartFile.class));
         verify(capturaRepository, never()).save(any(Captura.class));
         verify(messageQueueService, never()).sendToProcessingQueue(
-                anyLong(), anyLong(), anyString(), anyString()
+                anyLong(), anyLong(), anyString(), anyString(), any()
         );
     }
 }

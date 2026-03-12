@@ -1,78 +1,94 @@
 package com.fiap.fiapx.external.storage;
 
 import com.fiap.fiapx.domain.exception.InvalidFileException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
-import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
 
-    private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
-    private static final Set<String> ALLOWED_VIDEO_EXTENSIONS = Set.of(
-            ".mp4", ".mov", ".avi", ".mkv", ".webm", ".mpeg", ".mpg"
+    private static final List<String> ALLOWED_VIDEO_TYPES = Arrays.asList(
+            "video/mp4",
+            "video/mpeg",
+            "video/quicktime",
+            "video/x-msvideo",
+            "video/x-ms-wmv",
+            "video/webm",
+            "video/avi"
     );
 
-    private final S3Client s3Client;
+    private static final List<String> ALLOWED_VIDEO_EXTENSIONS = Arrays.asList(
+            ".mp4",
+            ".mpeg",
+            ".mpg",
+            ".mov",
+            ".avi",
+            ".wmv",
+            ".webm"
+    );
 
-    @Value("${aws.s3.bucket}")
-    private String bucket;
+    @Value("${capturas.storage.disk:local}")
+    private String storageDisk;
+
+    @Value("${capturas.storage.local-path:./uploads/capturas}")
+    private String localStoragePath;
 
     @Value("${capturas.max-video-size:100}")
     private Long maxVideoSizeMB;
 
-    public FileStorageService(S3Client s3Client) {
-        this.s3Client = s3Client;
-    }
-
     public String store(MultipartFile file) {
         validateFile(file);
 
-        String originalFilename = file.getOriginalFilename();
-        String extension = (originalFilename != null && originalFilename.contains("."))
-                ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                : "";
-        String s3Key = "uploads/" + UUID.randomUUID() + extension;
-        String detectedContentType = resolveContentType(file, originalFilename);
-
         try {
-            PutObjectRequest request = PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(s3Key)
-                .contentType(detectedContentType)
-                    .contentLength(file.getSize())
-                    .build();
+            // Criar diretório se não existir
+            Path uploadPath = Paths.get(localStoragePath);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
 
-            s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            log.info("Upload para S3 concluído: {}/{}", bucket, s3Key);
-            return s3Key;
+            // Gerar nome único para o arquivo
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                    : "";
+            String filename = UUID.randomUUID().toString() + extension;
+
+            // Salvar arquivo
+            Path filePath = uploadPath.resolve(filename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return filePath.toString();
 
         } catch (IOException e) {
-            throw new InvalidFileException("Erro ao fazer upload para S3: " + e.getMessage(), e);
+            throw new InvalidFileException("Erro ao salvar arquivo: " + e.getMessage(), e);
         }
     }
 
-    public byte[] load(String s3Key) {
-        GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(s3Key)
-                .build();
+    public File load(String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            throw new InvalidFileException("Arquivo não encontrado: " + path);
+        }
+        return file;
+    }
 
-        ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(request);
-        return response.asByteArray();
+    public void delete(String path) {
+        try {
+            Files.deleteIfExists(Paths.get(path));
+        } catch (IOException e) {
+            throw new InvalidFileException("Erro ao deletar arquivo: " + e.getMessage(), e);
+        }
     }
 
     private void validateFile(MultipartFile file) {
@@ -80,46 +96,44 @@ public class FileStorageService {
             throw new InvalidFileException("Arquivo vazio ou nulo");
         }
 
+        // Validar nome do arquivo
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new InvalidFileException("Nome do arquivo inválido");
+        }
+
+        // Validar extensão do arquivo
+        String fileExtension = getFileExtension(originalFilename).toLowerCase();
+        if (!ALLOWED_VIDEO_EXTENSIONS.contains(fileExtension)) {
+            throw new InvalidFileException(
+                    String.format("Extensão de arquivo não permitida. Extensões aceitas: %s",
+                            String.join(", ", ALLOWED_VIDEO_EXTENSIONS))
+            );
+        }
+
+        // Validar tipo de conteúdo
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_VIDEO_TYPES.contains(contentType.toLowerCase())) {
+            throw new InvalidFileException(
+                    String.format("Tipo de arquivo não permitido. Apenas vídeos são aceitos. Tipos aceitos: %s",
+                            String.join(", ", ALLOWED_VIDEO_TYPES))
+            );
+        }
+
+        // Validar tamanho
         long fileSizeMB = file.getSize() / (1024 * 1024);
         if (fileSizeMB > maxVideoSizeMB) {
             throw new InvalidFileException(
-                    String.format("Arquivo muito grande. Máximo: %d MB, enviado: %d MB", maxVideoSizeMB, fileSizeMB));
-        }
-
-        String originalFilename = file.getOriginalFilename();
-        String contentType = resolveContentType(file, originalFilename);
-        String extension = extractExtension(originalFilename);
-
-        boolean isVideoContentType = contentType.startsWith("video/");
-        boolean isKnownVideoExtension = ALLOWED_VIDEO_EXTENSIONS.contains(extension);
-
-        if (!isVideoContentType && !isKnownVideoExtension) {
-            throw new InvalidFileException("Apenas arquivos de vídeo são permitidos");
+                    String.format("Arquivo muito grande. Tamanho máximo: %d MB, Tamanho enviado: %d MB",
+                            maxVideoSizeMB, fileSizeMB)
+            );
         }
     }
 
-    private String resolveContentType(MultipartFile file, String originalFilename) {
-        String contentType = file.getContentType();
-        if (contentType != null && !contentType.isBlank() && !"application/octet-stream".equalsIgnoreCase(contentType)) {
-            return contentType;
-        }
-
-        return switch (extractExtension(originalFilename)) {
-            case ".mp4" -> "video/mp4";
-            case ".mov" -> "video/quicktime";
-            case ".avi" -> "video/x-msvideo";
-            case ".mkv" -> "video/x-matroska";
-            case ".webm" -> "video/webm";
-            case ".mpeg", ".mpg" -> "video/mpeg";
-            default -> contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType;
-        };
-    }
-
-    private String extractExtension(String originalFilename) {
-        if (originalFilename == null || !originalFilename.contains(".")) {
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
             return "";
         }
-
-        return originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+        return filename.substring(filename.lastIndexOf("."));
     }
 }

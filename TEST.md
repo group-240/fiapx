@@ -60,15 +60,3 @@ Após executar os testes, os relatórios ficam em:
 O projeto está configurado para exigir no mínimo **80% de cobertura**:
 - ✅ 80% de cobertura de linhas (LINE)
 - ✅ 80% de cobertura de branches (BRANCH)
-
-## ℹ️ Estrutura dos Testes
-
-Os testes estão organizados seguindo a arquitetura limpa do projeto:
-- `external/api/` - Testes dos controllers REST
-- `application/usecases/` - Testes dos casos de uso
-- `external/storage/` - Testes do serviço de armazenamento
-- `external/queue/` - Testes do serviço de mensageria
-- `domain/entities/` - Testes das entidades de domínio
-- `domain/exception/` - Testes das exceções customizadas
-- `adapters/gateway/` - Testes dos adaptadores de repositório
-- `application/dto/` e `dto/` - Testes dos DTOs

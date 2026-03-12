@@ -12,6 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuração do RabbitMQ para processamento de vídeos
+ * Define a fila, exchange e binding para mensagens de processamento
+ */
 @Configuration
 public class RabbitMQConfig {
 
@@ -51,3 +55,4 @@ public class RabbitMQConfig {
         return template;
     }
 }
+

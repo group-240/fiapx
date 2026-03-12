@@ -2,7 +2,6 @@ package com.fiap.fiapx.application.usecases;
 
 import com.fiap.fiapx.application.dto.CapturaDTO;
 import com.fiap.fiapx.domain.entities.Captura;
-import com.fiap.fiapx.domain.exception.InvalidFileException;
 import com.fiap.fiapx.domain.repositories.CapturaRepository;
 import com.fiap.fiapx.external.queue.MessageQueueService;
 import com.fiap.fiapx.external.storage.FileStorageService;
@@ -46,19 +45,18 @@ public class UploadCapturaUseCase {
 
                 Captura savedCaptura = capturaRepository.save(captura);
 
-                // 3. Enviar para fila de processamento (passa s3Key)
+                // 3. Enviar para fila de processamento
                 messageQueueService.sendToProcessingQueue(
                         savedCaptura.getId(),
                         savedCaptura.getIdUser(),
                         savedCaptura.getEmail(),
-                        savedCaptura.getPath()   // path agora é s3Key
+                        savedCaptura.getPath(),
+                        file.getBytes()
                 );
 
                 // 4. Adicionar à lista de resposta
                 capturasList.add(toDTO(savedCaptura));
 
-            } catch (InvalidFileException e) {
-                throw e;
             } catch (Exception e) {
                 // Log do erro mas continua processando outros arquivos
                 // (tratamento transacional parcial)

@@ -1,8 +1,11 @@
 package com.fiap.fiapx.external.api;
 
 import com.fiap.fiapx.domain.exception.CapturaNotFoundException;
+import com.fiap.fiapx.domain.exception.ExternalServiceUnavailableException;
 import com.fiap.fiapx.domain.exception.InvalidFileException;
 import com.fiap.fiapx.domain.exception.UnauthorizedAccessException;
+import com.fiap.fiapx.domain.exception.VideoProcessingException;
+import com.fiap.fiapx.domain.exception.VideoProcessingErrorException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -28,6 +31,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedAccessException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorizedAccess(UnauthorizedAccessException ex) {
         return buildErrorResponse(ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(VideoProcessingException.class)
+    public ResponseEntity<Map<String, Object>> handleVideoProcessing(VideoProcessingException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(VideoProcessingErrorException.class)
+    public ResponseEntity<Map<String, Object>> handleVideoProcessingError(VideoProcessingErrorException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ExternalServiceUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleExternalServiceUnavailable(ExternalServiceUnavailableException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
