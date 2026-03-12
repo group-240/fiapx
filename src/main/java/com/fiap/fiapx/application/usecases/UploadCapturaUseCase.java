@@ -2,6 +2,7 @@ package com.fiap.fiapx.application.usecases;
 
 import com.fiap.fiapx.application.dto.CapturaDTO;
 import com.fiap.fiapx.domain.entities.Captura;
+import com.fiap.fiapx.domain.exception.InvalidFileException;
 import com.fiap.fiapx.domain.repositories.CapturaRepository;
 import com.fiap.fiapx.external.queue.MessageQueueService;
 import com.fiap.fiapx.external.storage.FileStorageService;
@@ -56,6 +57,8 @@ public class UploadCapturaUseCase {
                 // 4. Adicionar à lista de resposta
                 capturasList.add(toDTO(savedCaptura));
 
+            } catch (InvalidFileException e) {
+                throw e;
             } catch (Exception e) {
                 // Log do erro mas continua processando outros arquivos
                 // (tratamento transacional parcial)

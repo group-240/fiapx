@@ -14,12 +14,17 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
+    private static final Set<String> ALLOWED_VIDEO_EXTENSIONS = Set.of(
+            ".mp4", ".mov", ".avi", ".mkv", ".webm", ".mpeg", ".mpg"
+    );
 
     private final S3Client s3Client;
 
@@ -41,12 +46,13 @@ public class FileStorageService {
                 ? originalFilename.substring(originalFilename.lastIndexOf("."))
                 : "";
         String s3Key = "uploads/" + UUID.randomUUID() + extension;
+        String detectedContentType = resolveContentType(file, originalFilename);
 
         try {
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucket)
                     .key(s3Key)
-                    .contentType(file.getContentType())
+                .contentType(detectedContentType)
                     .contentLength(file.getSize())
                     .build();
 
@@ -80,9 +86,40 @@ public class FileStorageService {
                     String.format("Arquivo muito grande. Máximo: %d MB, enviado: %d MB", maxVideoSizeMB, fileSizeMB));
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("video/")) {
+        String originalFilename = file.getOriginalFilename();
+        String contentType = resolveContentType(file, originalFilename);
+        String extension = extractExtension(originalFilename);
+
+        boolean isVideoContentType = contentType.startsWith("video/");
+        boolean isKnownVideoExtension = ALLOWED_VIDEO_EXTENSIONS.contains(extension);
+
+        if (!isVideoContentType && !isKnownVideoExtension) {
             throw new InvalidFileException("Apenas arquivos de vídeo são permitidos");
         }
+    }
+
+    private String resolveContentType(MultipartFile file, String originalFilename) {
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.isBlank() && !"application/octet-stream".equalsIgnoreCase(contentType)) {
+            return contentType;
+        }
+
+        return switch (extractExtension(originalFilename)) {
+            case ".mp4" -> "video/mp4";
+            case ".mov" -> "video/quicktime";
+            case ".avi" -> "video/x-msvideo";
+            case ".mkv" -> "video/x-matroska";
+            case ".webm" -> "video/webm";
+            case ".mpeg", ".mpg" -> "video/mpeg";
+            default -> contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType;
+        };
+    }
+
+    private String extractExtension(String originalFilename) {
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            return "";
+        }
+
+        return originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase(Locale.ROOT);
     }
 }
