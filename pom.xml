@@ -27,6 +27,7 @@
         <lombok.version>1.18.34</lombok.version>
         <mercadopago.version>2.1.29</mercadopago.version>
         <jackson.version>2.17.2</jackson.version>
+        <aws.sdk.version>2.25.40</aws.sdk.version>
 
         <!-- Test versions -->
         <junit.version>5.10.3</junit.version>
@@ -154,6 +155,25 @@
             <groupId>org.modelmapper</groupId>
             <artifactId>modelmapper</artifactId>
             <version>${modelmapper.version}</version>
+        </dependency>
+
+        <!-- AWS SDK v2 — S3 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+
+        <!-- RabbitMQ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <!-- Micrometer Prometheus registry — expõe /actuator/prometheus -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
     </dependencies>

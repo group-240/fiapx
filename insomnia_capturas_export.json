@@ -1,47 +1,62 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-03-11T01:42:00Z",
+  "__export_date": "2026-03-12T00:20:00Z",
   "__export_source": "insomnia.desktop.app:2026.1.0",
   "resources": [
     {
       "_id": "wrk_capturas",
       "_type": "workspace",
       "name": "Capturas FIAPX",
-      "description": "Coleção completa para testar endpoints de capturas de vídeo.\n\n**Microserviço:** FIAPX API\n**Base URL:** http://localhost:8888/api\n**Recursos:** Upload, listagem, download e atualização de status de capturas"
+      "description": "Coleção E2E para testar upload, processamento assíncrono e download de capturas"
+    },
+    {
+      "_id": "env_capturas_eks",
+      "_type": "environment",
+      "parentId": "wrk_capturas",
+      "name": "EKS - FIAPX",
+      "data": {
+        "base_url": "http://a9adaab7e8d134acf8aa67f4e233436d-d1a72ac954bec542.elb.us-east-1.amazonaws.com",
+        "user_id": "1",
+        "email": "user@fiap.com.br",
+        "captura_id": "1"
+      }
+    },
+    {
+      "_id": "fld_e2e_demo",
+      "_type": "request_group",
+      "parentId": "wrk_capturas",
+      "name": "E2E Demo (ordem)"
     },
     {
       "_id": "req_health",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "Health",
-      "description": "Verifica se a aplicação está rodando e saudável.\n\n**Retorna:**\n- status: UP (quando saudável)\n- application: Nome da aplicação",
+      "name": "01 - Health",
       "method": "GET",
-      "url": "http://localhost:8888/api/health",
+      "url": "{{ _.base_url }}/api/health",
       "headers": [],
       "body": {},
       "parameters": []
     },
     {
       "_id": "req_test_hello",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "Test Hello",
-      "description": "Endpoint de teste simples para verificar conectividade.",
+      "name": "02 - Test Hello",
       "method": "GET",
-      "url": "http://localhost:8888/api/test/hello",
+      "url": "{{ _.base_url }}/api/test/hello",
       "headers": [],
       "body": {},
       "parameters": []
     },
     {
       "_id": "req_list",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "List Capturas",
-      "description": "Lista todas as capturas de vídeo do usuário.\n\n**Retorna:**\n- id: ID da captura\n- status: PENDENTE, PROCESSANDO, CONCLUIDO, ERRO\n- email: Email do usuário\n- createdAt: Data de criação\n- updatedAt: Data de atualização",
+      "name": "04 - List Capturas (polling)",
       "method": "GET",
-      "url": "http://localhost:8888/api/capturas/list?userId=1",
+      "url": "{{ _.base_url }}/api/capturas/list?userId={{ _.user_id }}",
       "headers": [
         { "name": "Accept", "value": "application/json" }
       ],
@@ -50,12 +65,11 @@
     },
     {
       "_id": "req_upload",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "Upload Capturas (multipart)",
-      "description": "Faz upload de um ou mais vídeos para processamento.\n\n**Parâmetros:**\n- userId: ID do usuário (query param)\n- email: Email para notificações (query param)\n- files: Arquivo(s) de vídeo (multipart)\n\n**Formatos aceitos:** MP4, AVI, MOV\n**Tamanho máximo:** 100MB por arquivo",
+      "name": "03 - Upload 1 vídeo (multipart)",
       "method": "POST",
-      "url": "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br",
+      "url": "{{ _.base_url }}/api/capturas/upload?userId={{ _.user_id }}&email={{ _.email }}",
       "headers": [
         { "name": "Accept", "value": "application/json" }
       ],
@@ -66,7 +80,7 @@
             "name": "files",
             "type": "file",
             "fileName": "video.mp4",
-            "value": "/absolute/path/to/video.mp4"
+            "value": "C:\\temp\\video.mp4"
           }
         ]
       },
@@ -74,12 +88,11 @@
     },
     {
       "_id": "req_upload_multiple",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "Upload Múltiplo (multipart)",
-      "description": "Faz upload de múltiplos vídeos simultaneamente.\n\n**Vantagens:**\n- Processa vários vídeos de uma vez\n- Todos compartilham o mesmo userId e email\n- Cada vídeo recebe um ID único\n\n**Obs:** Use o mesmo nome 'files' para todos os arquivos.",
+      "name": "03b - Upload múltiplo (carga)",
       "method": "POST",
-      "url": "http://localhost:8888/api/capturas/upload?userId=1&email=user@fiap.com.br",
+      "url": "{{ _.base_url }}/api/capturas/upload?userId={{ _.user_id }}&email={{ _.email }}",
       "headers": [
         { "name": "Accept", "value": "application/json" }
       ],
@@ -90,13 +103,13 @@
             "name": "files",
             "type": "file",
             "fileName": "video1.mp4",
-            "value": "/absolute/path/to/video1.mp4"
+            "value": "C:\\temp\\video1.mp4"
           },
           {
             "name": "files",
             "type": "file",
             "fileName": "video2.mp4",
-            "value": "/absolute/path/to/video2.mp4"
+            "value": "C:\\temp\\video2.mp4"
           }
         ]
       },
@@ -104,24 +117,22 @@
     },
     {
       "_id": "req_download",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "Download Captura",
-      "description": "Faz o download do arquivo ZIP com frames processados.\n\n**Headers de Resposta Customizados:**\n- X-Download-Message: Mensagem de sucesso do download\n- X-Download-Filename: Nome do arquivo\n- X-Download-Size: Tamanho em bytes\n- Content-Type: application/zip\n- Content-Disposition: attachment com nome do arquivo\n\n**Como visualizar:**\n1. Faça a requisição\n2. Clique na aba 'Headers' na resposta\n3. Procure pelos headers X-Download-*\n4. O arquivo será baixado automaticamente",
+      "name": "05 - Download ZIP",
       "method": "GET",
-      "url": "http://localhost:8888/api/capturas/download/1?userId=1",
+      "url": "{{ _.base_url }}/api/capturas/download/{{ _.captura_id }}?userId={{ _.user_id }}",
       "headers": [],
       "body": {},
       "parameters": []
     },
     {
       "_id": "req_update_status",
-      "parentId": "wrk_capturas",
+      "parentId": "fld_e2e_demo",
       "_type": "request",
-      "name": "Update Status",
-      "description": "Atualiza o status de uma captura.\n\n**Status válidos:**\n- PENDENTE: Aguardando processamento\n- PROCESSANDO: Em processamento\n- CONCLUIDO: Processamento finalizado\n- ERRO: Erro no processamento\n\n**Exemplo de uso:**\nEste endpoint é chamado pelo microserviço de processamento de vídeos para notificar mudanças de status.",
+      "name": "06 - Update Status (manual)",
       "method": "PUT",
-      "url": "http://localhost:8888/api/capturas/update-status/1",
+      "url": "{{ _.base_url }}/api/capturas/update-status/{{ _.captura_id }}",
       "headers": [
         { "name": "Content-Type", "value": "application/json" },
         { "name": "Accept", "value": "application/json" }
